@@ -1,0 +1,13 @@
+{
+  "name": "@gbrennon/pi-hooks-tmux-notifications",
+  "version": "0.1.0",
+  "description": "Native TypeScript notification hook for the Pi coding agent.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}
