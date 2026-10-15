@@ -24,6 +24,9 @@ export class NotificationHooksExtension {
     api.on("agent_start", (_event: SettleEvent, ctx: HookEventContext) => {
       this.notificationService.handleAgentStart(ctx);
     });
+    api.on("agent_end", (event: SettleEvent, ctx: HookEventContext) => {
+      return this.notificationService.handleAgentEnd(api, event, ctx);
+    });
     api.on("agent_before_settle", (event: SettleEvent, ctx: HookEventContext) => {
       this.notificationService.handleBeforeSettle(event, ctx);
     });
