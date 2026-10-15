@@ -46,8 +46,9 @@ for agent in "${agents[@]}"; do
   "$bun_command" build "$root_dir/src/index.ts" \
     --target bun \
     --format esm \
-    --outfile "$tmp_dir/ai-toolkit-notify.ts" \
+    --outfile "$tmp_dir/ai-toolkit-notify-hook.ts" \
     --define "process.env.PI_HOOK_AGENT=\"$agent\"" >/dev/null
-  cp "$tmp_dir/ai-toolkit-notify.ts" "$extension_dir/ai-toolkit-notify.ts"
+  rm -f "$extension_dir/ai-toolkit-notify.ts"
+  cp "$tmp_dir/ai-toolkit-notify-hook.ts" "$extension_dir/ai-toolkit-notify-hook.ts"
   printf 'installed notification hook for %s in %s\n' "$agent" "$extension_dir"
 done
