@@ -44,8 +44,27 @@ export type AgentOutcome = "completed" | "aborted" | "error";
 
 export type NotificationEvent = "question" | "complete" | "error";
 
+export interface SettleContentBlock {
+  readonly type: "text";
+  readonly text: string;
+}
+
+export type AgentStopReason = "stop" | "length" | "toolUse" | "error" | "aborted";
+
+export interface SettleMessage {
+  readonly role: string;
+  readonly content?: string | readonly SettleContentBlock[];
+  readonly stopReason?: AgentStopReason;
+}
+
+export interface SettleContext {
+  readonly contextMessages?: readonly SettleMessage[];
+}
+
 export interface SettleEvent {
   readonly aborted?: boolean;
+  readonly context?: SettleContext;
+  readonly messages?: readonly SettleMessage[];
   readonly outcome?: AgentOutcome;
 }
 
@@ -61,6 +80,7 @@ export interface HookApi {
     event:
       | "ui_prompt_start"
       | "agent_start"
+      | "agent_end"
       | "agent_before_settle"
       | "agent_settled",
     handler: (
