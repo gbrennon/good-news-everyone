@@ -64,6 +64,7 @@ test("default export registers the notification lifecycle hooks", () => {
   expect(typeof defaultHook).toBe("function");
   api.lifecycleHandlers.agent_start!({}, { cwd: "/work/repo" });
   expect(api.registeredEvents).toContain("ui_prompt_start");
+  expect(api.registeredEvents).toContain("agent_end");
   expect(api.registeredEvents).toContain("agent_settled");
 });
 
@@ -119,6 +120,133 @@ test("does not notify before the agent settles", async () => {
   api.lifecycleHandlers.agent_before_settle!({ outcome: "completed" }, ctx);
 
   expect(api.calls).toEqual([]);
+});
+
+test("classifies an agent-end error as a failed task", async () => {
+  const service = new NotificationHookService("omp");
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.agent_end!({
+    messages: [
+      {
+        role: "assistant",
+        stopReason: "error",
+        content: [{ type: "text", text: "The task failed." }],
+      },
+    ],
+  }, ctx);
+
+  expect(api.calls[1]).toEqual({
+    command: "agent-notify",
+    args: [
+      "omp",
+      "error",
+      "--cwd",
+      "/work/repo",
+      "--message",
+      "task failed [session=pi-hooks window=1:pi id=@224]",
+    ],
+    cwd: "/work/repo",
+  });
+});
+
+test("classifies an agent-end question without punctuation as input needed", async () => {
+  const service = new NotificationHookService("omp");
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.agent_end!({
+    messages: [
+      {
+        role: "assistant",
+        content: [{
+          type: "text",
+          text: "What would you like me to change or investigate in this repository",
+        }],
+      },
+    ],
+  }, ctx);
+
+  expect(api.calls[1]).toEqual({
+    command: "agent-notify",
+    args: [
+      "omp",
+      "question",
+      "--cwd",
+      "/work/repo",
+      "--message",
+      "input needed [session=pi-hooks window=1:pi id=@224]",
+    ],
+    cwd: "/work/repo",
+  });
+});
+
+test("classifies an agent-end assistant question as input needed", async () => {
+  const service = new NotificationHookService("omp");
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.agent_end!({
+    messages: [
+      {
+        role: "assistant",
+        content: [{ type: "text", text: "Which option should I use?" }],
+      },
+    ],
+  }, ctx);
+
+  expect(api.calls[1]).toEqual({
+    command: "agent-notify",
+    args: [
+      "omp",
+      "question",
+      "--cwd",
+      "/work/repo",
+      "--message",
+      "input needed [session=pi-hooks window=1:pi id=@224]",
+    ],
+    cwd: "/work/repo",
+  });
+});
+
+test("classifies a settled assistant question as input needed", async () => {
+  const service = new NotificationHookService("pi");
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.agent_settled!({
+    outcome: "completed",
+    context: {
+      contextMessages: [
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Which option should I use?" }],
+        },
+      ],
+    },
+  }, ctx);
+
+  expect(api.calls[1]).toEqual({
+    command: "agent-notify",
+    args: [
+      "pi",
+      "question",
+      "--cwd",
+      "/work/repo",
+      "--message",
+      "input needed [session=pi-hooks window=1:pi id=@224]",
+    ],
+    cwd: "/work/repo",
+  });
 });
 
 test("notifies aborted settlement as an error", async () => {
