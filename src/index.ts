@@ -13,6 +13,8 @@ export type {
 
 export { NotificationHookService, NotificationHooksExtension };
 
-const defaultExtension = new NotificationHooksExtension();
+const defaultExtension = new NotificationHooksExtension(
+  new NotificationHookService(process.env.PI_HOOK_AGENT ?? "pi"),
+);
 
 export default defaultExtension.register.bind(defaultExtension);
