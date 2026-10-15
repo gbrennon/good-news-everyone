@@ -1,5 +1,5 @@
 {
-  "name": "@gbrennon/pi-hooks-notifications",
+  "name": "@gbrennon/gb-agent-notifications",
   "version": "0.1.0",
   "description": "Native TypeScript notification hook for the Pi coding agent.",
   "type": "module",
