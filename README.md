@@ -1,4 +1,4 @@
-# Pi Hooks — Notifications
+# GB Agent Notifications
 
 Native TypeScript lifecycle notification hook for the Pi coding agent.
 
