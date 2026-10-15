@@ -45,6 +45,7 @@ export type AgentOutcome = "completed" | "aborted" | "error";
 export type NotificationEvent = "question" | "complete" | "error";
 
 export interface SettleEvent {
+  readonly aborted?: boolean;
   readonly outcome?: AgentOutcome;
 }
 
