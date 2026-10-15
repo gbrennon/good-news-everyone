@@ -66,7 +66,9 @@ export class NotificationHookService {
     event: SettleEvent,
     ctx: HookEventContext,
   ): Promise<void> {
-    const outcome = event.outcome || this.outcomesByWorkspace[ctx.cwd] || "completed";
+    const outcome = event.aborted
+      ? "aborted"
+      : event.outcome || this.outcomesByWorkspace[ctx.cwd] || "completed";
     const template = NOTIFICATION_BY_OUTCOME[outcome];
     await this.sendNotification(api, template.kind, ctx.cwd, template.message);
   }
@@ -77,14 +79,37 @@ export class NotificationHookService {
     cwd: string,
     message: string,
   ): Promise<void> {
+    const context = await this.readTmuxContext(api, cwd);
+    const contextualMessage = `${message} [${context}]`;
+
     try {
       await api.exec(
         "agent-notify",
-        [this.agentName, event, "--cwd", cwd, "--message", message],
+        [this.agentName, event, "--cwd", cwd, "--message", contextualMessage],
         { cwd },
       );
     } catch {
       return;
+    }
+  }
+
+  private async readTmuxContext(api: HookApi, cwd: string): Promise<string> {
+    try {
+      const result = await api.exec(
+        "tmux",
+        [
+          "display-message",
+          "-p",
+          "session=#{session_name} window=#{window_index}:#{window_name} id=#{window_id}",
+        ],
+        { cwd },
+      );
+      const context = result.stdout.trim();
+      return result.code === 0 && context.length > 0
+        ? context
+        : "session=unavailable window=unavailable id=unavailable";
+    } catch {
+      return "session=unavailable window=unavailable id=unavailable";
     }
   }
 }
