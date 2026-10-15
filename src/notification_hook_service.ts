@@ -4,6 +4,7 @@ import type {
   HookEventContext,
   NotificationEvent,
   SettleEvent,
+  SettleMessage,
 } from "./contracts";
 
 interface NotificationTemplate {
@@ -17,6 +18,8 @@ const NOTIFICATION_BY_OUTCOME: Readonly<Record<AgentOutcome, NotificationTemplat
   error: { kind: "error", message: "task failed" },
 };
 
+const QUESTION_START = /^(what|which|where|when|why|how|who|can|could|would|should|do|does|is|are)\b/i;
+
 /**
  * Dispatch desktop lifecycle notifications for the Pi coding agent.
  *
@@ -26,10 +29,12 @@ const NOTIFICATION_BY_OUTCOME: Readonly<Record<AgentOutcome, NotificationTemplat
 export class NotificationHookService {
   private readonly agentName: string;
   private readonly outcomesByWorkspace: Record<string, AgentOutcome>;
+  private readonly agentEndNotificationByWorkspace: Record<string, boolean>;
 
   public constructor(agentName: string = "pi") {
     this.agentName = agentName;
     this.outcomesByWorkspace = {};
+    this.agentEndNotificationByWorkspace = {};
   }
 
   /**
@@ -46,8 +51,24 @@ export class NotificationHookService {
    * Reset the recorded outcome for the workspace when a new agent turn starts.
    */
   public handleAgentStart(ctx: HookEventContext): void {
-    const outcomes = this.outcomesByWorkspace;
-    outcomes[ctx.cwd] = "completed";
+    this.outcomesByWorkspace[ctx.cwd] = "completed";
+    this.agentEndNotificationByWorkspace[ctx.cwd] = false;
+  }
+
+  /**
+   * Notify when an agent-end message asks the user for input.
+   */
+  public async handleAgentEnd(
+    api: HookApi,
+    event: SettleEvent,
+    ctx: HookEventContext,
+  ): Promise<void> {
+    const notification = this.getAgentEndNotification(event);
+    if (!notification) {
+      return;
+    }
+    this.agentEndNotificationByWorkspace[ctx.cwd] = true;
+    await this.sendNotification(api, notification.kind, ctx.cwd, notification.message);
   }
 
   /**
@@ -66,11 +87,83 @@ export class NotificationHookService {
     event: SettleEvent,
     ctx: HookEventContext,
   ): Promise<void> {
+    if (this.agentEndNotificationByWorkspace[ctx.cwd]) {
+      return;
+    }
+    const template = this.getSettlementTemplate(event, ctx);
+    await this.sendNotification(api, template.kind, ctx.cwd, template.message);
+  }
+
+  private getAgentEndNotification(
+    event: SettleEvent,
+  ): NotificationTemplate | undefined {
+    if (this.isAssistantFailure(event)) {
+      return { kind: "error", message: "task failed" };
+    }
+    if (this.isAssistantQuestion(event)) {
+      return { kind: "question", message: "input needed" };
+    }
+    return undefined;
+  }
+
+  private getSettlementTemplate(
+    event: SettleEvent,
+    ctx: HookEventContext,
+  ): NotificationTemplate {
+    if (this.isAssistantQuestion(event)) {
+      return { kind: "question", message: "input needed" };
+    }
     const outcome = event.aborted
       ? "aborted"
       : event.outcome || this.outcomesByWorkspace[ctx.cwd] || "completed";
-    const template = NOTIFICATION_BY_OUTCOME[outcome];
-    await this.sendNotification(api, template.kind, ctx.cwd, template.message);
+    return NOTIFICATION_BY_OUTCOME[outcome];
+  }
+
+  private isAssistantQuestion(event: SettleEvent): boolean {
+    const assistantMessage = this.findLatestAssistantMessage(
+      this.getSettleMessages(event),
+    );
+    return assistantMessage
+      ? this.isQuestionText(this.readMessageText(assistantMessage))
+      : false;
+  }
+
+  private isAssistantFailure(event: SettleEvent): boolean {
+    const assistantMessage = this.findLatestAssistantMessage(
+      this.getSettleMessages(event),
+    );
+    return assistantMessage?.stopReason === "error"
+      || assistantMessage?.stopReason === "aborted";
+  }
+
+  private isQuestionText(text: string): boolean {
+    const normalizedText = text.trim();
+    return normalizedText.endsWith("?") || QUESTION_START.test(normalizedText);
+  }
+
+  private getSettleMessages(event: SettleEvent): readonly SettleMessage[] {
+    if (event.messages) {
+      return event.messages;
+    }
+    return event.context?.contextMessages ?? [];
+  }
+
+  private findLatestAssistantMessage(
+    messages: readonly SettleMessage[],
+  ): SettleMessage | undefined {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index]?.role === "assistant") {
+        return messages[index];
+      }
+    }
+    return undefined;
+  }
+
+  private readMessageText(message: SettleMessage): string {
+    if (typeof message.content === "string") {
+      return message.content;
+    }
+    return message.content?.map((block) => block.text).join(" ") ?? "";
   }
 
   private async sendNotification(
