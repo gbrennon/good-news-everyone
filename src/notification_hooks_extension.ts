@@ -33,5 +33,8 @@ export class NotificationHooksExtension {
     api.on("agent_settled", (event: SettleEvent, ctx: HookEventContext) => {
       return this.notificationService.handleAgentSettled(api, event, ctx);
     });
+    api.on("session_shutdown", (_event: SettleEvent, _ctx: HookEventContext) => {
+      this.notificationService.handleSessionShutdown();
+    });
   }
 }
