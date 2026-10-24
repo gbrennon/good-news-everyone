@@ -1,5 +1,8 @@
 import { NotificationHookService } from "./notification_hook_service";
-import { NotificationHooksExtension } from "./notification_hooks_extension";
+import {
+  type AgentLifecycle,
+  NotificationHooksExtension,
+} from "./notification_hooks_extension";
 import { ReminderCoordinator } from "./reminder_coordinator";
 import { SystemScheduler } from "./system_scheduler";
 
@@ -15,12 +18,18 @@ export type {
   SettleEvent,
 } from "./contracts";
 
+export type { AgentLifecycle };
+
 export {
   NotificationHookService,
   NotificationHooksExtension,
   ReminderCoordinator,
   SystemScheduler,
 };
+
+function lifecycleForAgent(agent: string): AgentLifecycle {
+  return agent === "omp" ? "end" : "settled";
+}
 
 function readPositiveInteger(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -33,8 +42,11 @@ const reminderCoordinator = new ReminderCoordinator(
   readPositiveInteger(process.env.PI_NOTIFY_MAX_REMINDERS, 3),
 );
 
+const agentName = process.env.PI_HOOK_AGENT ?? "pi";
+
 const defaultExtension = new NotificationHooksExtension(
-  new NotificationHookService(process.env.PI_HOOK_AGENT ?? "pi", reminderCoordinator),
+  new NotificationHookService(agentName, reminderCoordinator),
+  lifecycleForAgent(agentName),
 );
 
 export default defaultExtension.register.bind(defaultExtension);
