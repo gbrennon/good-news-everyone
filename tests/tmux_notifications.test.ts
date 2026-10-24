@@ -180,7 +180,8 @@ test("classifies an agent-end question without punctuation as input needed", asy
       "--cwd",
       "/work/repo",
       "--message",
-      "input needed [session=pi-hooks window=1:pi id=@224]",
+      "What would you like me to change or investigate in this repository"
+        + " [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
@@ -210,7 +211,7 @@ test("classifies an agent-end assistant question as input needed", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "input needed [session=pi-hooks window=1:pi id=@224]",
+      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
@@ -243,7 +244,7 @@ test("classifies a settled assistant question as input needed", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "input needed [session=pi-hooks window=1:pi id=@224]",
+      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
