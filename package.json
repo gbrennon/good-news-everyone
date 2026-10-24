@@ -1,7 +1,7 @@
 {
-  "name": "@gbrennon/gb-agent-notifications",
+  "name": "@gbrennon/good-news-everyone",
   "version": "0.1.0",
-  "description": "Native TypeScript notification hook for the Pi coding agent.",
+  "description": "Notifications from your AI agent, both the good and the not-so-good.",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
