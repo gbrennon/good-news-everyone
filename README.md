@@ -46,6 +46,14 @@ The name covers all three events, errors included:
   session shuts down (`session_shutdown`).
 - `complete` and `error` notifications are informational and never re-sent.
 
+## Agent compatibility
+
+- pi settles on `agent_settled` and signals idle input on `ui_prompt_start`.
+- omp emits neither; it exposes `agent_end` as the terminal run signal, so the
+  omp build drives complete, question, and error from `agent_end`.
+- The install bakes `PI_HOOK_AGENT`, and the extension selects the lifecycle
+  from it (`settled` for pi, `end` for omp).
+
 ## Architecture
 
 - `src/contracts.ts` defines the `HookApi`, `Scheduler`, and event payload contracts.
