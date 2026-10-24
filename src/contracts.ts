@@ -82,7 +82,8 @@ export interface HookApi {
       | "agent_start"
       | "agent_end"
       | "agent_before_settle"
-      | "agent_settled",
+      | "agent_settled"
+      | "session_shutdown",
     handler: (
       event: SettleEvent,
       ctx: HookEventContext,
@@ -93,4 +94,12 @@ export interface HookApi {
     args: readonly string[],
     options: HookExecOptions,
   ): Promise<HookExecutionResult>;
+}
+
+export interface ScheduledTask {
+  cancel(): void;
+}
+
+export interface Scheduler {
+  schedule(callback: () => void, delayMs: number): ScheduledTask;
 }
