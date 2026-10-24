@@ -6,6 +6,7 @@ import type {
   SettleEvent,
   SettleMessage,
 } from "./contracts";
+import type { ReminderCoordinator } from "./reminder_coordinator";
 
 interface NotificationTemplate {
   readonly kind: NotificationEvent;
@@ -28,11 +29,16 @@ const QUESTION_START = /^(what|which|where|when|why|how|who|can|could|would|shou
  */
 export class NotificationHookService {
   private readonly agentName: string;
+  private readonly reminders: ReminderCoordinator | undefined;
   private readonly outcomesByWorkspace: Record<string, AgentOutcome>;
   private readonly agentEndNotificationByWorkspace: Record<string, boolean>;
 
-  public constructor(agentName: string = "pi") {
+  public constructor(
+    agentName: string = "pi",
+    reminders?: ReminderCoordinator,
+  ) {
     this.agentName = agentName;
+    this.reminders = reminders;
     this.outcomesByWorkspace = {};
     this.agentEndNotificationByWorkspace = {};
   }
@@ -51,8 +57,16 @@ export class NotificationHookService {
    * Reset the recorded outcome for the workspace when a new agent turn starts.
    */
   public handleAgentStart(ctx: HookEventContext): void {
+    this.reminders?.cancel(ctx.cwd);
     this.outcomesByWorkspace[ctx.cwd] = "completed";
     this.agentEndNotificationByWorkspace[ctx.cwd] = false;
+  }
+
+  /**
+   * Cancel every pending reminder when the session shuts down.
+   */
+  public handleSessionShutdown(): void {
+    this.reminders?.cancelAll();
   }
 
   /**
@@ -68,7 +82,13 @@ export class NotificationHookService {
       return;
     }
     this.agentEndNotificationByWorkspace[ctx.cwd] = true;
-    await this.sendNotification(api, notification.kind, ctx.cwd, notification.message);
+    await this.sendNotification(
+      api,
+      notification.kind,
+      ctx.cwd,
+      notification.message,
+      notification.kind === "question",
+    );
   }
 
   /**
@@ -91,7 +111,13 @@ export class NotificationHookService {
       return;
     }
     const template = this.getSettlementTemplate(event, ctx);
-    await this.sendNotification(api, template.kind, ctx.cwd, template.message);
+    await this.sendNotification(
+      api,
+      template.kind,
+      ctx.cwd,
+      template.message,
+      template.kind === "question",
+    );
   }
 
   private getAgentEndNotification(
@@ -100,18 +126,17 @@ export class NotificationHookService {
     if (this.isAssistantFailure(event)) {
       return { kind: "error", message: "task failed" };
     }
-    if (this.isAssistantQuestion(event)) {
-      return { kind: "question", message: "input needed" };
-    }
-    return undefined;
+    const question = this.getAssistantQuestion(event);
+    return question ? { kind: "question", message: question } : undefined;
   }
 
   private getSettlementTemplate(
     event: SettleEvent,
     ctx: HookEventContext,
   ): NotificationTemplate {
-    if (this.isAssistantQuestion(event)) {
-      return { kind: "question", message: "input needed" };
+    const question = this.getAssistantQuestion(event);
+    if (question) {
+      return { kind: "question", message: question };
     }
     const outcome = event.aborted
       ? "aborted"
@@ -119,13 +144,24 @@ export class NotificationHookService {
     return NOTIFICATION_BY_OUTCOME[outcome];
   }
 
-  private isAssistantQuestion(event: SettleEvent): boolean {
+  private getAssistantQuestion(event: SettleEvent): string | undefined {
     const assistantMessage = this.findLatestAssistantMessage(
       this.getSettleMessages(event),
     );
-    return assistantMessage
-      ? this.isQuestionText(this.readMessageText(assistantMessage))
-      : false;
+    if (!assistantMessage) {
+      return undefined;
+    }
+    const text = this.readMessageText(assistantMessage).trim();
+    return this.isQuestionText(text) ? this.summarizeQuestion(text) : undefined;
+  }
+
+  private summarizeQuestion(text: string): string {
+    const singleLine = text.replace(/\s+/g, " ").trim();
+    const maxLength = 120;
+    if (singleLine.length <= maxLength) {
+      return singleLine;
+    }
+    return `${singleLine.slice(0, maxLength - 3)}...`;
   }
 
   private isAssistantFailure(event: SettleEvent): boolean {
@@ -167,6 +203,20 @@ export class NotificationHookService {
   }
 
   private async sendNotification(
+    api: HookApi,
+    event: NotificationEvent,
+    cwd: string,
+    message: string,
+    resend: boolean = false,
+  ): Promise<void> {
+    await this.dispatch(api, event, cwd, message);
+    if (resend) {
+      this.reminders?.arm(cwd, (): Promise<void> =>
+        this.dispatch(api, event, cwd, message));
+    }
+  }
+
+  private async dispatch(
     api: HookApi,
     event: NotificationEvent,
     cwd: string,
