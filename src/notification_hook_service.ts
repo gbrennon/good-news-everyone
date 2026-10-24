@@ -110,6 +110,28 @@ export class NotificationHookService {
     if (this.agentEndNotificationByWorkspace[ctx.cwd]) {
       return;
     }
+    await this.notifySettlement(api, event, ctx);
+  }
+
+  /**
+   * Emit the settlement notification from the terminal agent run.
+   *
+   * Used by agents such as omp that do not emit agent_settled and treat
+   * agent_end as the final run signal.
+   */
+  public async handleTerminalEnd(
+    api: HookApi,
+    event: SettleEvent,
+    ctx: HookEventContext,
+  ): Promise<void> {
+    await this.notifySettlement(api, event, ctx);
+  }
+
+  private async notifySettlement(
+    api: HookApi,
+    event: SettleEvent,
+    ctx: HookEventContext,
+  ): Promise<void> {
     const template = this.getSettlementTemplate(event, ctx);
     await this.sendNotification(
       api,
@@ -138,10 +160,20 @@ export class NotificationHookService {
     if (question) {
       return { kind: "question", message: question };
     }
-    const outcome = event.aborted
-      ? "aborted"
-      : event.outcome || this.outcomesByWorkspace[ctx.cwd] || "completed";
-    return NOTIFICATION_BY_OUTCOME[outcome];
+    if (this.isAssistantFailure(event)) {
+      return { kind: "error", message: "task failed" };
+    }
+    return NOTIFICATION_BY_OUTCOME[this.resolveOutcome(event, ctx)];
+  }
+
+  private resolveOutcome(
+    event: SettleEvent,
+    ctx: HookEventContext,
+  ): AgentOutcome {
+    if (event.aborted) {
+      return "aborted";
+    }
+    return event.outcome || this.outcomesByWorkspace[ctx.cwd] || "completed";
   }
 
   private getAssistantQuestion(event: SettleEvent): string | undefined {
