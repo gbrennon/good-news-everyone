@@ -6,6 +6,8 @@ import {
   type HookExecutionResult,
   NotificationHookService,
   NotificationHooksExtension,
+  NotificationTaglineSelector,
+  RandomSource,
   ReminderCoordinator,
   type ScheduledTask,
   type Scheduler,
@@ -93,7 +95,11 @@ function buildHarness(intervalMs: number, maxReminders: number): {
 } {
   const scheduler = new FakeScheduler();
   const reminders = new ReminderCoordinator(scheduler, intervalMs, maxReminders);
-  const service = new NotificationHookService("pi", reminders);
+  const service = new NotificationHookService(
+    "pi",
+    reminders,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const api = new FakeHookApi();
   new NotificationHooksExtension(service).register(api);
   return { api, scheduler, ctx: { cwd: "/work/repo" } };
@@ -122,12 +128,17 @@ test("re-sends an unanswered agent question after the interval", async () => {
   const { api, scheduler, ctx } = buildHarness(1_000, 3);
 
   await askAgentQuestion(api, ctx);
+  const initialMessage = api.lastNotificationMessage();
   await scheduler.tick();
+  const resentMessage = api.lastNotificationMessage();
 
   expect(scheduler.delays[0]).toBe(1_000);
   expect(api.notificationCount()).toBe(2);
   expect(api.lastNotificationKind()).toBe("question");
-  expect(api.lastNotificationMessage()).toContain("Which option should I use?");
+  expect(resentMessage).toBe(initialMessage);
+  expect(resentMessage).toBe(
+    "What-mas?: Which option should I use? [session=s window=1:pi id=@1]",
+  );
 });
 
 test("does not re-send the idle input-needed prompt", async () => {
