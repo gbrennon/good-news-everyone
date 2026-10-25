@@ -1,15 +1,6 @@
-import type { ScheduledTask, Scheduler } from "./contracts";
-
-export type ReminderResend = () => Promise<void>;
-
-interface PendingReminder {
-  readonly resend: ReminderResend;
-  remindersSent: number;
-  task: ScheduledTask;
-}
-
-const DEFAULT_INTERVAL_MS = 120_000;
-const DEFAULT_MAX_REMINDERS = 3;
+import type { ScheduledTask, Scheduler } from "../contracts";
+import type { PendingReminder } from "./pending_reminder";
+import type { ReminderResend } from "./reminder_resend";
 
 /**
  * Re-send unhandled notifications until the user acts on them.
@@ -19,6 +10,9 @@ const DEFAULT_MAX_REMINDERS = 3;
  * Cancelling a workspace reminder marks the notification as handled.
  */
 export class ReminderCoordinator {
+  private static readonly DEFAULT_INTERVAL_MS = 120_000;
+  private static readonly DEFAULT_MAX_REMINDERS = 3;
+
   private readonly scheduler: Scheduler;
   private readonly intervalMs: number;
   private readonly maxReminders: number;
@@ -26,8 +20,8 @@ export class ReminderCoordinator {
 
   public constructor(
     scheduler: Scheduler,
-    intervalMs: number = DEFAULT_INTERVAL_MS,
-    maxReminders: number = DEFAULT_MAX_REMINDERS,
+    intervalMs: number = ReminderCoordinator.DEFAULT_INTERVAL_MS,
+    maxReminders: number = ReminderCoordinator.DEFAULT_MAX_REMINDERS,
   ) {
     this.scheduler = scheduler;
     this.intervalMs = intervalMs;

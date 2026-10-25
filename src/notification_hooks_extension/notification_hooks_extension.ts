@@ -1,7 +1,7 @@
-import type { HookApi, HookEventContext, SettleEvent } from "./contracts";
-import { NotificationHookService } from "./notification_hook_service";
-
-export type AgentLifecycle = "settled" | "end";
+import type { HookApi, HookEventContext, SettleEvent } from "../contracts";
+import { NotificationHookService } from "../notification_hook_service";
+import { NotificationTaglineSelector } from "../notification_taglines";
+import type { AgentLifecycle } from "./agent_lifecycle";
 
 /**
  * Register the native TypeScript notification hook on the Pi HookApi.
@@ -20,7 +20,11 @@ export class NotificationHooksExtension {
     notificationService?: NotificationHookService,
     lifecycle: AgentLifecycle = "settled",
   ) {
-    this.notificationService = notificationService ?? new NotificationHookService("pi");
+    this.notificationService = notificationService ?? new NotificationHookService(
+      "pi",
+      undefined,
+      new NotificationTaglineSelector(),
+    );
     this.lifecycle = lifecycle;
   }
 

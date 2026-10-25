@@ -6,6 +6,8 @@ import {
   type HookExecutionResult,
   NotificationHookService,
   NotificationHooksExtension,
+  NotificationTaglineSelector,
+  RandomSource,
   type SettleEvent,
 } from "../src/index";
 
@@ -47,7 +49,11 @@ class FakeHookApi implements HookApi {
 }
 
 function buildOmp(): { api: FakeHookApi; ctx: HookEventContext } {
-  const service = new NotificationHookService("omp");
+  const service = new NotificationHookService(
+    "omp",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const api = new FakeHookApi();
   new NotificationHooksExtension(service, "end").register(api);
   return { api, ctx: { cwd: "/work/repo" } };
@@ -74,7 +80,9 @@ test("omp notifies completion from agent_end", async () => {
 
   expect(api.lastNotification()).toEqual([
     "omp", "complete", "--cwd", "/work/repo",
-    "--message", "task complete [session=s window=1:omp id=@1]",
+    "--message",
+    "Good news, everyone! We've got a very special delivery today."
+      + ": task complete [session=s window=1:omp id=@1]",
   ]);
 });
 
@@ -93,7 +101,7 @@ test("omp notifies the real question text from agent_end", async () => {
 
   expect(api.lastNotification()).toEqual([
     "omp", "question", "--cwd", "/work/repo",
-    "--message", "Which option should I use? [session=s window=1:omp id=@1]",
+    "--message", "What-mas?: Which option should I use? [session=s window=1:omp id=@1]",
   ]);
 });
 
@@ -106,6 +114,8 @@ test("omp notifies failure from an aborted agent_end", async () => {
 
   expect(api.lastNotification()).toEqual([
     "omp", "error", "--cwd", "/work/repo",
-    "--message", "task failed [session=s window=1:omp id=@1]",
+    "--message",
+    "Good news, everyone! There's a report on TV with some very bad news!"
+      + ": task failed [session=s window=1:omp id=@1]",
   ]);
 });

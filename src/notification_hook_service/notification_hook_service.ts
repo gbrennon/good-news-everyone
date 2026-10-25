@@ -5,21 +5,10 @@ import type {
   NotificationEvent,
   SettleEvent,
   SettleMessage,
-} from "./contracts";
-import type { ReminderCoordinator } from "./reminder_coordinator";
-
-interface NotificationTemplate {
-  readonly kind: NotificationEvent;
-  readonly message: string;
-}
-
-const NOTIFICATION_BY_OUTCOME: Readonly<Record<AgentOutcome, NotificationTemplate>> = {
-  completed: { kind: "complete", message: "task complete" },
-  aborted: { kind: "error", message: "task failed" },
-  error: { kind: "error", message: "task failed" },
-};
-
-const QUESTION_START = /^(what|which|where|when|why|how|who|can|could|would|should|do|does|is|are)\b/i;
+} from "../contracts";
+import { NotificationTaglineSelector } from "../notification_taglines";
+import type { ReminderCoordinator } from "../reminder_coordinator";
+import type { NotificationTemplate } from "./notification_template";
 
 /**
  * Dispatch desktop lifecycle notifications for the Pi coding agent.
@@ -28,17 +17,31 @@ const QUESTION_START = /^(what|which|where|when|why|how|who|can|could|would|shou
  * agent-notify on prompt questions and agent settlement.
  */
 export class NotificationHookService {
+  private static readonly NOTIFICATION_BY_OUTCOME: Readonly<
+    Record<AgentOutcome, NotificationTemplate>
+  > = {
+    completed: { kind: "complete", message: "task complete" },
+    aborted: { kind: "error", message: "task failed" },
+    error: { kind: "error", message: "task failed" },
+  };
+
+  private static readonly QUESTION_START =
+    /^(what|which|where|when|why|how|who|can|could|would|should|do|does|is|are)\b/i;
+
   private readonly agentName: string;
   private readonly reminders: ReminderCoordinator | undefined;
+  private readonly taglineSelector: NotificationTaglineSelector;
   private readonly outcomesByWorkspace: Record<string, AgentOutcome>;
   private readonly agentEndNotificationByWorkspace: Record<string, boolean>;
 
   public constructor(
-    agentName: string = "pi",
-    reminders?: ReminderCoordinator,
+    agentName: string,
+    reminders: ReminderCoordinator | undefined,
+    taglineSelector: NotificationTaglineSelector,
   ) {
     this.agentName = agentName;
     this.reminders = reminders;
+    this.taglineSelector = taglineSelector;
     this.outcomesByWorkspace = {};
     this.agentEndNotificationByWorkspace = {};
   }
@@ -163,7 +166,7 @@ export class NotificationHookService {
     if (this.isAssistantFailure(event)) {
       return { kind: "error", message: "task failed" };
     }
-    return NOTIFICATION_BY_OUTCOME[this.resolveOutcome(event, ctx)];
+    return NotificationHookService.NOTIFICATION_BY_OUTCOME[this.resolveOutcome(event, ctx)];
   }
 
   private resolveOutcome(
@@ -206,7 +209,8 @@ export class NotificationHookService {
 
   private isQuestionText(text: string): boolean {
     const normalizedText = text.trim();
-    return normalizedText.endsWith("?") || QUESTION_START.test(normalizedText);
+    return normalizedText.endsWith("?")
+      || NotificationHookService.QUESTION_START.test(normalizedText);
   }
 
   private getSettleMessages(event: SettleEvent): readonly SettleMessage[] {
@@ -241,10 +245,12 @@ export class NotificationHookService {
     message: string,
     resend: boolean = false,
   ): Promise<void> {
-    await this.dispatch(api, event, cwd, message);
+    const tagline = this.taglineSelector.select(event);
+    const composedMessage = `${tagline}: ${message}`;
+    await this.dispatch(api, event, cwd, composedMessage);
     if (resend) {
       this.reminders?.arm(cwd, (): Promise<void> =>
-        this.dispatch(api, event, cwd, message));
+        this.dispatch(api, event, cwd, composedMessage));
     }
   }
 

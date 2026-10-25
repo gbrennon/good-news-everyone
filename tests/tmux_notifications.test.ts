@@ -6,6 +6,8 @@ import defaultHook, {
   type HookExecutionResult,
   NotificationHookService,
   NotificationHooksExtension,
+  NotificationTaglineSelector,
+  RandomSource,
   type SettleEvent,
 } from "../src/index";
 
@@ -69,7 +71,11 @@ test("default export registers the notification lifecycle hooks", () => {
 });
 
 test("notification hook includes tmux context for questions and failures", async () => {
-  const service = new NotificationHookService("pi");
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -89,7 +95,7 @@ test("notification hook includes tmux context for questions and failures", async
         "--cwd",
         "/work/repo",
         "--message",
-        "input needed [session=pi-hooks window=1:pi id=@224]",
+        "What-mas?: input needed [session=pi-hooks window=1:pi id=@224]",
       ],
       cwd: "/work/repo",
     },
@@ -102,7 +108,8 @@ test("notification hook includes tmux context for questions and failures", async
         "--cwd",
         "/work/repo",
         "--message",
-        "task failed [session=pi-hooks window=1:pi id=@224]",
+        "Good news, everyone! There's a report on TV with some very bad news!"
+          + ": task failed [session=pi-hooks window=1:pi id=@224]",
       ],
       cwd: "/work/repo",
     },
@@ -110,7 +117,11 @@ test("notification hook includes tmux context for questions and failures", async
 });
 
 test("does not notify before the agent settles", async () => {
-  const service = new NotificationHookService("pi");
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -123,7 +134,11 @@ test("does not notify before the agent settles", async () => {
 });
 
 test("classifies an agent-end error as a failed task", async () => {
-  const service = new NotificationHookService("omp");
+  const service = new NotificationHookService(
+    "omp",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -147,14 +162,19 @@ test("classifies an agent-end error as a failed task", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "task failed [session=pi-hooks window=1:pi id=@224]",
+      "Good news, everyone! There's a report on TV with some very bad news!"
+        + ": task failed [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
 });
 
 test("classifies an agent-end question without punctuation as input needed", async () => {
-  const service = new NotificationHookService("omp");
+  const service = new NotificationHookService(
+    "omp",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -180,7 +200,7 @@ test("classifies an agent-end question without punctuation as input needed", asy
       "--cwd",
       "/work/repo",
       "--message",
-      "What would you like me to change or investigate in this repository"
+        "What-mas?: What would you like me to change or investigate in this repository"
         + " [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
@@ -188,7 +208,11 @@ test("classifies an agent-end question without punctuation as input needed", asy
 });
 
 test("classifies an agent-end assistant question as input needed", async () => {
-  const service = new NotificationHookService("omp");
+  const service = new NotificationHookService(
+    "omp",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -211,14 +235,18 @@ test("classifies an agent-end assistant question as input needed", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
+        "What-mas?: Which option should I use? [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
 });
 
 test("classifies a settled assistant question as input needed", async () => {
-  const service = new NotificationHookService("pi");
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -244,14 +272,18 @@ test("classifies a settled assistant question as input needed", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
+        "What-mas?: Which option should I use? [session=pi-hooks window=1:pi id=@224]",
     ],
     cwd: "/work/repo",
   });
 });
 
 test("notifies aborted settlement as an error", async () => {
-  const service = new NotificationHookService("pi");
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   extension.register(api);
@@ -267,14 +299,19 @@ test("notifies aborted settlement as an error", async () => {
       "--cwd",
       "/work/repo",
       "--message",
-      "task failed [session=pi-hooks window=1:pi id=@224]",
-    ],
-    cwd: "/work/repo",
+      "Good news, everyone! There's a report on TV with some very bad news!"
+        + ": task failed [session=pi-hooks window=1:pi id=@224]",
+      ],
+      cwd: "/work/repo",
   });
 });
 
 test("notifies outside tmux with an explicit unavailable context", async () => {
-  const service = new NotificationHookService("omp");
+  const service = new NotificationHookService(
+    "omp",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
   api.tmuxIsAvailable = false;
@@ -293,7 +330,8 @@ test("notifies outside tmux with an explicit unavailable context", async () => {
         "--cwd",
         "/work/repo",
         "--message",
-        "task complete [session=unavailable window=unavailable id=unavailable]",
+        "Good news, everyone! We've got a very special delivery today."
+          + ": task complete [session=unavailable window=unavailable id=unavailable]",
       ],
       cwd: "/work/repo",
     },
