@@ -246,11 +246,11 @@ export class NotificationHookService {
     resend: boolean = false,
   ): Promise<void> {
     const tagline = this.taglineSelector.select(event);
-    const composedMessage = `${tagline}: ${message}`;
-    await this.dispatch(api, event, cwd, composedMessage);
+    await this.dispatch(api, event, cwd, tagline, message);
     if (resend) {
-      this.reminders?.arm(cwd, (): Promise<void> =>
-        this.dispatch(api, event, cwd, composedMessage));
+      this.reminders?.arm(cwd, async (): Promise<void> => {
+        await this.dispatch(api, event, cwd, tagline, message);
+      });
     }
   }
 
@@ -258,6 +258,7 @@ export class NotificationHookService {
     api: HookApi,
     event: NotificationEvent,
     cwd: string,
+    title: string,
     message: string,
   ): Promise<void> {
     const context = await this.readTmuxContext(api, cwd);
@@ -266,7 +267,16 @@ export class NotificationHookService {
     try {
       await api.exec(
         "agent-notify",
-        [this.agentName, event, "--cwd", cwd, "--message", contextualMessage],
+        [
+          this.agentName,
+          event,
+          "--cwd",
+          cwd,
+          "--title",
+          title,
+          "--message",
+          contextualMessage,
+        ],
         { cwd },
       );
     } catch {
