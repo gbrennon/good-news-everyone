@@ -34,6 +34,14 @@ format `<tagline>: <message> [<tmux context>]`.
 - `complete` and `error` notifications use the same quote sources.
 - Questions re-sent by reminders preserve the originally selected quote.
 
+#### Screenshots
+
+![Completion notification](docs/assets/notification-complete.png)
+
+![Question notification](docs/assets/notification-question.png)
+
+![Error notification](docs/assets/notification-error.png)
+
 ## Overview
 
 - Dispatches notifications on `ui_prompt_start` (input needed) and
