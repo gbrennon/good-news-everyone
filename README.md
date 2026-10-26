@@ -26,8 +26,9 @@ The name covers all three events, errors included:
 
 ### Taglines
 
-Runtime notifications use a category-specific Professor Farnsworth quote in the
-format `<tagline>: <message> [<tmux context>]`.
+Runtime notifications pass the selected quote as the notification title via --title argument and the original message plus [tmux context] via --message argument.
+
+
 
 - `question` notifications use quotes verified from Futurama Season 1, Season 2,
   and Season 3 transcripts.
