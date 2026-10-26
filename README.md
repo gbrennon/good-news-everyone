@@ -27,9 +27,6 @@ The name covers all three events, errors included:
 ### Taglines
 
 Runtime notifications pass the selected quote as the notification title via --title argument and the original message plus [tmux context] via --message argument.
-
-
-
 - `question` notifications use quotes verified from Futurama Season 1, Season 2,
   and Season 3 transcripts.
 - `complete` and `error` notifications use the same quote sources.
