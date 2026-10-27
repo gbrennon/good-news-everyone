@@ -137,7 +137,7 @@ test("re-sends an unanswered agent question after the interval", async () => {
   expect(api.lastNotificationKind()).toBe("question");
   expect(resentMessage).toBe(initialMessage);
   expect(resentMessage).toBe(
-    "What-mas?: Which option should I use? [session=s window=1:pi id=@1]",
+    "Which option should I use? [session=s window=1:pi id=@1]",
   );
 });
 
