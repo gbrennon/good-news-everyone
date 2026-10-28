@@ -33,6 +33,7 @@ export class NotificationHookService {
   private readonly taglineSelector: NotificationTaglineSelector;
   private readonly outcomesByWorkspace: Record<string, AgentOutcome>;
   private readonly agentEndNotificationByWorkspace: Record<string, boolean>;
+  private readonly questionNotificationByWorkspace: Record<string, boolean>;
 
   public constructor(
     agentName: string,
@@ -44,6 +45,7 @@ export class NotificationHookService {
     this.taglineSelector = taglineSelector;
     this.outcomesByWorkspace = {};
     this.agentEndNotificationByWorkspace = {};
+    this.questionNotificationByWorkspace = {};
   }
 
   /**
@@ -53,6 +55,10 @@ export class NotificationHookService {
     api: HookApi,
     ctx: HookEventContext,
   ): Promise<void> {
+    if (this.questionNotificationByWorkspace[ctx.cwd]) {
+      return;
+    }
+    this.questionNotificationByWorkspace[ctx.cwd] = true;
     await this.sendNotification(api, "question", ctx.cwd, "input needed");
   }
 
@@ -63,6 +69,7 @@ export class NotificationHookService {
     this.reminders?.cancel(ctx.cwd);
     this.outcomesByWorkspace[ctx.cwd] = "completed";
     this.agentEndNotificationByWorkspace[ctx.cwd] = false;
+    this.questionNotificationByWorkspace[ctx.cwd] = false;
   }
 
   /**
@@ -83,6 +90,15 @@ export class NotificationHookService {
     const notification = this.getAgentEndNotification(event);
     if (!notification) {
       return;
+    }
+    if (
+      notification.kind === "question"
+      && this.questionNotificationByWorkspace[ctx.cwd]
+    ) {
+      return;
+    }
+    if (notification.kind === "question") {
+      this.questionNotificationByWorkspace[ctx.cwd] = true;
     }
     this.agentEndNotificationByWorkspace[ctx.cwd] = true;
     await this.sendNotification(
@@ -136,6 +152,15 @@ export class NotificationHookService {
     ctx: HookEventContext,
   ): Promise<void> {
     const template = this.getSettlementTemplate(event, ctx);
+    if (
+      template.kind === "question"
+      && this.questionNotificationByWorkspace[ctx.cwd]
+    ) {
+      return;
+    }
+    if (template.kind === "question") {
+      this.questionNotificationByWorkspace[ctx.cwd] = true;
+    }
     await this.sendNotification(
       api,
       template.kind,
