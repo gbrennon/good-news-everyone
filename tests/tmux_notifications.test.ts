@@ -118,6 +118,43 @@ test("notification hook includes tmux context for questions and failures", async
     },
   ]);
 });
+test("does not duplicate input notification when settlement repeats the question", async () => {
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.ui_prompt_start!({}, ctx);
+  await api.lifecycleHandlers.agent_end!({
+    messages: [
+      {
+        role: "assistant",
+        content: [{ type: "text", text: "Which option should I use?" }],
+      },
+    ],
+  }, ctx);
+  await api.lifecycleHandlers.agent_settled!({
+    outcome: "completed",
+    context: {
+      contextMessages: [
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Which option should I use?" }],
+        },
+      ],
+    },
+  }, ctx);
+
+  const notifications = api.calls.filter(
+    (call) => call.command === "agent-notify",
+  );
+  expect(notifications).toHaveLength(1);
+});
 
 test("does not notify before the agent settles", async () => {
   const service = new NotificationHookService(
