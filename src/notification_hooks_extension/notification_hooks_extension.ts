@@ -6,7 +6,7 @@ import type { AgentLifecycle } from "./agent_lifecycle";
 /**
  * Register the native TypeScript notification hook on the Pi HookApi.
  *
- * Binds lifecycle desktop notifications dispatched through agent-notify to the
+ * Binds lifecycle desktop notifications dispatched through notify-send to the
  * Pi extension runtime. The lifecycle selects which event marks the terminal
  * run: pi settles on agent_settled, while omp treats agent_end as terminal
  * because it does not emit agent_settled, agent_before_settle, or
