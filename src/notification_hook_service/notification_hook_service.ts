@@ -14,7 +14,7 @@ import type { NotificationTemplate } from "./notification_template";
  * Dispatch desktop lifecycle notifications for the Pi coding agent.
  *
  * Tracks the latest turn outcome per workspace directory and invokes
- * agent-notify on prompt questions and agent settlement.
+ * notify-send on prompt questions and agent settlement.
  */
 export class NotificationHookService {
   private static readonly NOTIFICATION_BY_OUTCOME: Readonly<
@@ -287,45 +287,46 @@ export class NotificationHookService {
     message: string,
   ): Promise<void> {
     const context = await this.readTmuxContext(api, cwd);
-    const contextualMessage = `${message} [${context}]`;
+    const notificationMessage = [
+      `agent=${this.agentName}`,
+      context,
+    ].filter((part): part is string => part !== undefined).join(" ");
 
     try {
-      await api.exec(
-        "agent-notify",
-        [
-          this.agentName,
-          event,
-          "--cwd",
-          cwd,
-          "--title",
-          title,
-          "--message",
-          contextualMessage,
-        ],
-        { cwd },
-      );
+      const notificationArgs = event === "error"
+        ? ["--urgency=critical", title, notificationMessage]
+        : [title, notificationMessage];
+      await api.exec("notify-send", notificationArgs, { cwd });
     } catch {
       return;
     }
   }
 
-  private async readTmuxContext(api: HookApi, cwd: string): Promise<string> {
+  private async readTmuxContext(
+    api: HookApi,
+    cwd: string,
+  ): Promise<string | undefined> {
+    const paneId = process.env.TMUX_PANE;
+    if (!paneId) {
+      return undefined;
+    }
+
     try {
       const result = await api.exec(
         "tmux",
         [
           "display-message",
           "-p",
-          "session=#{session_name} window=#{window_index}:#{window_name} id=#{window_id}",
+          "-t",
+          paneId,
+          "session=#{session_name} window=#{window_index}:#{window_name}",
         ],
         { cwd },
       );
       const context = result.stdout.trim();
-      return result.code === 0 && context.length > 0
-        ? context
-        : "session=unavailable window=unavailable id=unavailable";
+      return result.code === 0 && context.length > 0 ? context : undefined;
     } catch {
-      return "session=unavailable window=unavailable id=unavailable";
+      return undefined;
     }
   }
 }

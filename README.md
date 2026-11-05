@@ -26,7 +26,8 @@ The name covers all three events, errors included:
 
 ### Taglines
 
-Runtime notifications pass the selected quote as the notification title via --title argument and the original message plus [tmux context] via --message argument.
+Runtime notifications use the selected quote as the notification title. The body contains only
+the agent name and, when running inside tmux, the originating session and window.
 - `question` notifications use quotes verified from Futurama Season 1, Season 2,
   and Season 3 transcripts.
 - `complete` and `error` notifications use the same quote sources.
@@ -43,7 +44,7 @@ Runtime notifications pass the selected quote as the notification title via --ti
 ## Overview
 
 - Dispatches notifications on `ui_prompt_start` (input needed) and
-  `agent_settled` (complete/error) via `agent-notify`.
+  `agent_settled` (complete/error) via `notify-send`.
 - Tracks the latest turn outcome per workspace directory.
 - Re-sends unhandled `question` (input needed) notifications on a fixed interval until the user
 responds, the session shuts down, or a reminder cap is reached.
