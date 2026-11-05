@@ -15,6 +15,10 @@ import {
 } from "../src/index";
 
 class FakeHookApi implements HookApi {
+  public constructor() {
+    process.env.TMUX_PANE = "@1";
+  }
+
   public readonly calls: { command: string; args: readonly string[] }[] = [];
   public readonly lifecycleHandlers: Record<
     string,
@@ -36,28 +40,28 @@ class FakeHookApi implements HookApi {
   ): Promise<HookExecutionResult> {
     this.calls.push({ command, args });
     if (command === "tmux") {
-      return { code: 0, stdout: "session=s window=1:pi id=@1\n", stderr: "" };
+      return { code: 0, stdout: "session=s window=1:pi\n", stderr: "" };
     }
     return { code: 0, stdout: "", stderr: "" };
   }
 
   public notificationCount(): number {
-    return this.calls.filter((call) => call.command === "agent-notify").length;
+    return this.calls.filter((call) => call.command === "notify-send").length;
   }
 
   public lastNotificationKind(): string | undefined {
     const notifications = this.calls.filter(
-      (call) => call.command === "agent-notify",
+      (call) => call.command === "notify-send",
     );
-    return notifications[notifications.length - 1]?.args[1];
+    const title = notifications[notifications.length - 1]?.args[0];
+    return title === "What-mas?" ? "question" : title ? "complete" : undefined;
   }
 
   public lastNotificationMessage(): string | undefined {
     const notifications = this.calls.filter(
-      (call) => call.command === "agent-notify",
+      (call) => call.command === "notify-send",
     );
-    const last = notifications[notifications.length - 1];
-    return last?.args[last.args.indexOf("--message") + 1];
+    return notifications[notifications.length - 1]?.args.at(-1);
   }
 }
 
@@ -137,7 +141,7 @@ test("re-sends an unanswered agent question after the interval", async () => {
   expect(api.lastNotificationKind()).toBe("question");
   expect(resentMessage).toBe(initialMessage);
   expect(resentMessage).toBe(
-    "Which option should I use? [session=s window=1:pi id=@1]",
+    "agent=pi session=s window=1:pi",
   );
 });
 
@@ -148,7 +152,7 @@ test("does not re-send the idle input-needed prompt", async () => {
   await scheduler.tick();
 
   expect(api.notificationCount()).toBe(1);
-  expect(api.lastNotificationMessage()).toContain("input needed");
+  expect(api.lastNotificationMessage()).toBe("agent=pi session=s window=1:pi");
 });
 
 test("stops re-sending once the maximum reminders is reached", async () => {
