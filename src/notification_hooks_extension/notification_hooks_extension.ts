@@ -1,6 +1,8 @@
 import type { HookApi, HookEventContext, SettleEvent } from "../contracts";
 import { NotificationHookService } from "../notification_hook_service";
 import { NotificationTaglineSelector } from "../notification_taglines";
+import { ReminderCoordinator } from "../reminder_coordinator";
+import { SystemScheduler } from "../system_scheduler";
 import type { AgentLifecycle } from "./agent_lifecycle";
 
 /**
@@ -22,7 +24,7 @@ export class NotificationHooksExtension {
   ) {
     this.notificationService = notificationService ?? new NotificationHookService(
       "pi",
-      undefined,
+      new ReminderCoordinator(new SystemScheduler()),
       new NotificationTaglineSelector(),
     );
     this.lifecycle = lifecycle;
