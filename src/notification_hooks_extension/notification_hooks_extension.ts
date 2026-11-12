@@ -1,12 +1,14 @@
 import type { HookApi, HookEventContext, SettleEvent } from "../contracts";
 import { NotificationHookService } from "../notification_hook_service";
 import { NotificationTaglineSelector } from "../notification_taglines";
+import { ReminderCoordinator } from "../reminder_coordinator";
+import { SystemScheduler } from "../system_scheduler";
 import type { AgentLifecycle } from "./agent_lifecycle";
 
 /**
  * Register the native TypeScript notification hook on the Pi HookApi.
  *
- * Binds lifecycle desktop notifications dispatched through agent-notify to the
+ * Binds lifecycle desktop notifications dispatched through notify-send to the
  * Pi extension runtime. The lifecycle selects which event marks the terminal
  * run: pi settles on agent_settled, while omp treats agent_end as terminal
  * because it does not emit agent_settled, agent_before_settle, or
@@ -22,7 +24,7 @@ export class NotificationHooksExtension {
   ) {
     this.notificationService = notificationService ?? new NotificationHookService(
       "pi",
-      undefined,
+      new ReminderCoordinator(new SystemScheduler()),
       new NotificationTaglineSelector(),
     );
     this.lifecycle = lifecycle;

@@ -26,6 +26,10 @@ class FakeHookApi implements HookApi {
   > = {};
   public tmuxIsAvailable: boolean = true;
 
+  public constructor() {
+    process.env.TMUX_PANE = "@test";
+  }
+
   public on(event: string, handler: unknown): void {
     this.registeredEvents.push(event);
     if (event === "tool_result") {
@@ -44,7 +48,7 @@ class FakeHookApi implements HookApi {
     if (command === "tmux" && this.tmuxIsAvailable) {
       return {
         code: 0,
-        stdout: "session=pi-hooks window=1:pi id=@224\n",
+        stdout: "session=pi-hooks window=1:pi\n",
         stderr: "",
       };
     }
@@ -55,8 +59,57 @@ class FakeHookApi implements HookApi {
 const tmuxArgs = [
   "display-message",
   "-p",
-  "session=#{session_name} window=#{window_index}:#{window_name} id=#{window_id}",
+  "-t",
+  "@test",
+  "session=#{session_name} window=#{window_index}:#{window_name}",
 ];
+
+test("notification identifies the agent pane and sends only concise metadata", async () => {
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const previousPane = process.env.TMUX_PANE;
+  process.env.TMUX_PANE = "@agent";
+
+  try {
+    await api.lifecycleHandlers.agent_settled!({ outcome: "completed" }, {
+      cwd: "/work/repo",
+    });
+  } finally {
+    if (previousPane === undefined) {
+      delete process.env.TMUX_PANE;
+    } else {
+      process.env.TMUX_PANE = previousPane;
+    }
+  }
+
+  expect(api.calls).toEqual([
+    {
+      command: "tmux",
+      args: [
+        "display-message",
+        "-p",
+        "-t",
+        "@agent",
+        "session=#{session_name} window=#{window_index}:#{window_name}",
+      ],
+      cwd: "/work/repo",
+    },
+    {
+      command: "notify-send",
+      args: [
+        "Good news, everyone! We've got a very special delivery today.",
+        "agent=pi session=pi-hooks window=1:pi",
+      ],
+      cwd: "/work/repo",
+    },
+  ]);
+});
 
 test("default export registers the notification lifecycle hooks", () => {
   const api = new FakeHookApi();
@@ -88,35 +141,61 @@ test("notification hook includes tmux context for questions and failures", async
   expect(api.calls).toEqual([
     { command: "tmux", args: tmuxArgs, cwd: "/work/repo" },
     {
-      command: "agent-notify",
+      command: "notify-send",
       args: [
-        "pi",
-        "question",
-        "--cwd",
-        "/work/repo",
-        "--title",
         "What-mas?",
-        "--message",
-        "input needed [session=pi-hooks window=1:pi id=@224]",
+        "agent=pi session=pi-hooks window=1:pi",
       ],
       cwd: "/work/repo",
     },
     { command: "tmux", args: tmuxArgs, cwd: "/work/repo" },
     {
-      command: "agent-notify",
+      command: "notify-send",
       args: [
-        "pi",
-        "error",
-        "--cwd",
-        "/work/repo",
-        "--title",
+        "--urgency=critical",
         "Good news, everyone! There's a report on TV with some very bad news!",
-        "--message",
-        "task failed [session=pi-hooks window=1:pi id=@224]",
+        "agent=pi session=pi-hooks window=1:pi",
       ],
       cwd: "/work/repo",
     },
   ]);
+});
+test("does not duplicate input notification when settlement repeats the question", async () => {
+  const service = new NotificationHookService(
+    "pi",
+    undefined,
+    new NotificationTaglineSelector(new RandomSource(() => 0)),
+  );
+  const extension = new NotificationHooksExtension(service);
+  const api = new FakeHookApi();
+  extension.register(api);
+  const ctx: HookEventContext = { cwd: "/work/repo" };
+
+  await api.lifecycleHandlers.ui_prompt_start!({}, ctx);
+  await api.lifecycleHandlers.agent_end!({
+    messages: [
+      {
+        role: "assistant",
+        content: [{ type: "text", text: "Which option should I use?" }],
+      },
+    ],
+  }, ctx);
+  await api.lifecycleHandlers.agent_settled!({
+    outcome: "completed",
+    context: {
+      contextMessages: [
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Which option should I use?" }],
+        },
+      ],
+    },
+  }, ctx);
+
+  const notifications = api.calls.filter(
+    (call) => call.command === "notify-send",
+  );
+  expect(notifications).toHaveLength(1);
 });
 
 test("does not notify before the agent settles", async () => {
@@ -158,16 +237,11 @@ test("classifies an agent-end error as a failed task", async () => {
   }, ctx);
 
   expect(api.calls[1]).toEqual({
-    command: "agent-notify",
+    command: "notify-send",
     args: [
-      "omp",
-      "error",
-      "--cwd",
-      "/work/repo",
-      "--title",
+      "--urgency=critical",
       "Good news, everyone! There's a report on TV with some very bad news!",
-      "--message",
-      "task failed [session=pi-hooks window=1:pi id=@224]",
+      "agent=omp session=pi-hooks window=1:pi",
     ],
     cwd: "/work/repo",
   });
@@ -197,17 +271,10 @@ test("classifies an agent-end question without punctuation as input needed", asy
   }, ctx);
 
   expect(api.calls[1]).toEqual({
-    command: "agent-notify",
+    command: "notify-send",
     args: [
-      "omp",
-      "question",
-      "--cwd",
-      "/work/repo",
-      "--title",
       "What-mas?",
-      "--message",
-      "What would you like me to change or investigate in this repository"
-        + " [session=pi-hooks window=1:pi id=@224]",
+      "agent=omp session=pi-hooks window=1:pi",
     ],
     cwd: "/work/repo",
   });
@@ -234,16 +301,10 @@ test("classifies an agent-end assistant question as input needed", async () => {
   }, ctx);
 
   expect(api.calls[1]).toEqual({
-    command: "agent-notify",
+    command: "notify-send",
     args: [
-      "omp",
-      "question",
-      "--cwd",
-      "/work/repo",
-      "--title",
       "What-mas?",
-      "--message",
-      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
+      "agent=omp session=pi-hooks window=1:pi",
     ],
     cwd: "/work/repo",
   });
@@ -273,16 +334,10 @@ test("classifies a settled assistant question as input needed", async () => {
   }, ctx);
 
   expect(api.calls[1]).toEqual({
-    command: "agent-notify",
+    command: "notify-send",
     args: [
-      "pi",
-      "question",
-      "--cwd",
-      "/work/repo",
-      "--title",
       "What-mas?",
-      "--message",
-      "Which option should I use? [session=pi-hooks window=1:pi id=@224]",
+      "agent=pi session=pi-hooks window=1:pi",
     ],
     cwd: "/work/repo",
   });
@@ -302,16 +357,11 @@ test("notifies aborted settlement as an error", async () => {
   await api.lifecycleHandlers.agent_settled!({ aborted: true }, ctx);
 
   expect(api.calls[1]).toEqual({
-    command: "agent-notify",
+    command: "notify-send",
     args: [
-      "pi",
-      "error",
-      "--cwd",
-      "/work/repo",
-      "--title",
+      "--urgency=critical",
       "Good news, everyone! There's a report on TV with some very bad news!",
-      "--message",
-      "task failed [session=pi-hooks window=1:pi id=@224]",
+      "agent=pi session=pi-hooks window=1:pi",
     ],
       cwd: "/work/repo",
   });
@@ -325,27 +375,48 @@ test("notifies outside tmux with an explicit unavailable context", async () => {
   );
   const extension = new NotificationHooksExtension(service);
   const api = new FakeHookApi();
-  api.tmuxIsAvailable = false;
+  const previousPane = process.env.TMUX_PANE;
+  delete process.env.TMUX_PANE;
   extension.register(api);
   const ctx: HookEventContext = { cwd: "/work/repo" };
 
   await api.lifecycleHandlers.agent_settled!({ outcome: "completed" }, ctx);
+  if (previousPane !== undefined) {
+    process.env.TMUX_PANE = previousPane;
+  }
 
-  expect(api.calls).toEqual([
-    { command: "tmux", args: tmuxArgs, cwd: "/work/repo" },
-    {
-      command: "agent-notify",
+  expect(api.calls).toEqual([{
+      command: "notify-send",
       args: [
-        "omp",
-        "complete",
-        "--cwd",
-        "/work/repo",
-        "--title",
         "Good news, everyone! We've got a very special delivery today.",
-        "--message",
-        "task complete [session=unavailable window=unavailable id=unavailable]",
+        "agent=omp",
       ],
       cwd: "/work/repo",
     },
   ]);
+});
+
+test("default extension notifies on settlement without an injected service", async () => {
+  const extension = new NotificationHooksExtension();
+  const api = new FakeHookApi();
+  extension.register(api);
+
+  expect(api.registeredEvents).toContain("agent_start");
+  expect(api.registeredEvents).toContain("session_shutdown");
+  expect(api.registeredEvents).toContain("ui_prompt_start");
+  expect(api.registeredEvents).toContain("agent_end");
+  expect(api.registeredEvents).toContain("agent_before_settle");
+  expect(api.registeredEvents).toContain("agent_settled");
+
+  await api.lifecycleHandlers.agent_settled!({ outcome: "completed" }, {
+    cwd: "/work/repo",
+  });
+
+  const notifications = api.calls.filter((call) => call.command === "notify-send");
+  expect(notifications).toHaveLength(1);
+  expect(notifications[0]!.args).toEqual([
+    expect.any(String),
+    "agent=pi session=pi-hooks window=1:pi",
+  ]);
+  expect(notifications[0]!.cwd).toBe("/work/repo");
 });

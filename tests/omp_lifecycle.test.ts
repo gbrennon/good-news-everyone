@@ -12,6 +12,10 @@ import {
 } from "../src/index";
 
 class FakeHookApi implements HookApi {
+  public constructor() {
+    process.env.TMUX_PANE = "@1";
+  }
+
   public readonly calls: { command: string; args: readonly string[] }[] = [];
   public readonly registeredEvents: string[] = [];
   public readonly lifecycleHandlers: Record<
@@ -35,14 +39,14 @@ class FakeHookApi implements HookApi {
   ): Promise<HookExecutionResult> {
     this.calls.push({ command, args });
     if (command === "tmux") {
-      return { code: 0, stdout: "session=s window=1:omp id=@1\n", stderr: "" };
+      return { code: 0, stdout: "session=s window=1:omp\n", stderr: "" };
     }
     return { code: 0, stdout: "", stderr: "" };
   }
 
   public lastNotification(): readonly string[] | undefined {
     const notifications = this.calls.filter(
-      (call) => call.command === "agent-notify",
+      (call) => call.command === "notify-send",
     );
     return notifications[notifications.length - 1]?.args;
   }
@@ -79,9 +83,8 @@ test("omp notifies completion from agent_end", async () => {
   }, ctx);
 
   expect(api.lastNotification()).toEqual([
-    "omp", "complete", "--cwd", "/work/repo",
-    "--title", "Good news, everyone! We've got a very special delivery today.",
-    "--message", "task complete [session=s window=1:omp id=@1]",
+    "Good news, everyone! We've got a very special delivery today.",
+    "agent=omp session=s window=1:omp",
   ]);
 });
 
@@ -99,9 +102,8 @@ test("omp notifies the real question text from agent_end", async () => {
   }, ctx);
 
   expect(api.lastNotification()).toEqual([
-    "omp", "question", "--cwd", "/work/repo",
-    "--title", "What-mas?",
-    "--message", "Which option should I use? [session=s window=1:omp id=@1]",
+    "What-mas?",
+    "agent=omp session=s window=1:omp",
   ]);
 });
 
@@ -113,8 +115,8 @@ test("omp notifies failure from an aborted agent_end", async () => {
   }, ctx);
 
   expect(api.lastNotification()).toEqual([
-    "omp", "error", "--cwd", "/work/repo",
-    "--title", "Good news, everyone! There's a report on TV with some very bad news!",
-    "--message", "task failed [session=s window=1:omp id=@1]",
+    "--urgency=critical",
+    "Good news, everyone! There's a report on TV with some very bad news!",
+    "agent=omp session=s window=1:omp",
   ]);
 });

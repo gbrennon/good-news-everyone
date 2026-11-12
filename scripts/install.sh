@@ -51,6 +51,9 @@ for agent in "${agents[@]}"; do
   rm -f "$extension_dir/ai-toolkit-notify.ts"
   rm -f "$extension_dir/ai-toolkit-notify-hook.ts"
   rm -f "$extension_dir/gb-agent-notifications-hook.ts"
+  if [[ "$agent" == "omp" ]]; then
+    rm -f "${HOME}/.omp/agent/hooks/post/ai-toolkit-notify.ts"
+  fi
   cp "$tmp_dir/good-news-everyone-hook.ts" \
     "$extension_dir/good-news-everyone-hook.ts"
   printf 'installed Good News, Everyone! hook for %s in %s\n' \
