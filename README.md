@@ -26,12 +26,12 @@ The name covers all three events, errors included:
 
 ### Taglines
 
-Runtime notifications use the selected quote as the notification title. The body contains only
-the agent name and, when running inside tmux, the originating session and window.
-- `question` notifications use quotes verified from Futurama Season 1, Season 2,
-  and Season 3 transcripts.
-- `complete` and `error` notifications use the same quote sources.
-- Questions re-sent by reminders preserve the originally selected quote.
+Runtime notifications use the selected opening phrase as the notification title. The body contains
+the tagline, a newline, session metadata, and a trailing newline.
+- `question` notifications use question-oriented taglines.
+- `complete` notifications use completion-oriented taglines.
+- `error` notifications use failure-oriented taglines.
+- Questions re-sent by reminders preserve the originally selected title and tagline.
 
 #### Screenshots
 
