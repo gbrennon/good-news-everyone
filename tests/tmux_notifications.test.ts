@@ -395,3 +395,28 @@ test("notifies outside tmux with an explicit unavailable context", async () => {
     },
   ]);
 });
+
+test("default extension notifies on settlement without an injected service", async () => {
+  const extension = new NotificationHooksExtension();
+  const api = new FakeHookApi();
+  extension.register(api);
+
+  expect(api.registeredEvents).toContain("agent_start");
+  expect(api.registeredEvents).toContain("session_shutdown");
+  expect(api.registeredEvents).toContain("ui_prompt_start");
+  expect(api.registeredEvents).toContain("agent_end");
+  expect(api.registeredEvents).toContain("agent_before_settle");
+  expect(api.registeredEvents).toContain("agent_settled");
+
+  await api.lifecycleHandlers.agent_settled!({ outcome: "completed" }, {
+    cwd: "/work/repo",
+  });
+
+  const notifications = api.calls.filter((call) => call.command === "notify-send");
+  expect(notifications).toHaveLength(1);
+  expect(notifications[0]!.args).toEqual([
+    expect.any(String),
+    "agent=pi session=pi-hooks window=1:pi",
+  ]);
+  expect(notifications[0]!.cwd).toBe("/work/repo");
+});
