@@ -6,7 +6,10 @@ import type {
   SettleEvent,
   SettleMessage,
 } from "../contracts";
-import { NotificationTaglineSelector } from "../notification_taglines";
+import {
+  NotificationTaglineSelector,
+  type NotificationTagline,
+} from "../notification_taglines";
 import type { ReminderCoordinator } from "../reminder_coordinator";
 import type { NotificationTemplate } from "./notification_template";
 
@@ -283,19 +286,20 @@ export class NotificationHookService {
     api: HookApi,
     event: NotificationEvent,
     cwd: string,
-    title: string,
+    tagline: NotificationTagline,
     message: string,
   ): Promise<void> {
     const context = await this.readTmuxContext(api, cwd);
-    const notificationMessage = [
+    const metadata = [
       `agent=${this.agentName}`,
       context,
     ].filter((part): part is string => part !== undefined).join(" ");
+    const notificationMessage = `${tagline.body}\n${metadata}\n`;
 
     try {
       const notificationArgs = event === "error"
-        ? ["--urgency=critical", title, notificationMessage]
-        : [title, notificationMessage];
+        ? ["--urgency=critical", tagline.title, notificationMessage]
+        : [tagline.title, notificationMessage];
       await api.exec("notify-send", notificationArgs, { cwd });
     } catch {
       return;
