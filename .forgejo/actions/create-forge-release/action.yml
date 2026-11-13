@@ -1,0 +1,85 @@
+name: Create forge release
+description: Create a release through a Forgejo-compatible or GitHub API
+inputs:
+  api-url:
+    description: Release API base URL
+    required: true
+  repository:
+    description: Release repository in owner/name format
+    required: true
+  token:
+    description: Release API token
+    required: true
+  auth-scheme:
+    description: Authorization scheme
+    required: true
+  tag:
+    description: Release tag
+    required: true
+  notes:
+    description: Path to release notes
+    required: true
+  target-commitish:
+    description: Optional target commit for GitHub releases
+    required: false
+    default: ''
+outputs:
+  upload-url:
+    description: Release asset upload URL
+    value: ${{ steps.create.outputs.upload-url }}
+runs:
+  using: composite
+  steps:
+    - name: Create release
+      id: create
+      shell: bash
+      env:
+        API_URL: ${{ inputs.api-url }}
+        REPOSITORY: ${{ inputs.repository }}
+        TOKEN: ${{ inputs.token }}
+        AUTH_SCHEME: ${{ inputs.auth-scheme }}
+        TAG: ${{ inputs.tag }}
+        NOTES: ${{ inputs.notes }}
+        TARGET_COMMITISH: ${{ inputs.target-commitish }}
+      run: |
+        set -euo pipefail
+
+        case "${AUTH_SCHEME,,}" in
+          bearer) authorization="Bearer $TOKEN" ;;
+          token) authorization="token $TOKEN" ;;
+          *) printf 'Unsupported release auth scheme: %s\n' "$AUTH_SCHEME" >&2; exit 1 ;;
+        esac
+
+        payload="$(
+          jq -n \
+            --arg tag_name "$TAG" \
+            --arg name "$TAG" \
+            --arg target_commitish "$TARGET_COMMITISH" \
+            --rawfile body "$NOTES" \
+            '{
+              tag_name: $tag_name,
+              name: $name,
+              body: $body,
+              draft: false,
+              prerelease: false
+            } + (if $target_commitish == "" then {} else {
+              target_commitish: $target_commitish
+            } end)'
+        )"
+        response_file="$RUNNER_TEMP/release-response.json"
+        curl --fail-with-body --silent --show-error \
+          --proto '=https' --tlsv1.2 \
+          --request POST \
+          --url "$API_URL/repos/$REPOSITORY/releases" \
+          --header "Authorization: $authorization" \
+          --header 'Accept: application/json' \
+          --header 'Content-Type: application/json' \
+          --output "$response_file" \
+          --data "$payload"
+        upload_url="$(jq -r '.upload_url // empty' "$response_file" | cut -d '{' -f 1)"
+        if [[ -z "$upload_url" ]]; then
+          printf 'Release response did not include an upload URL\n' >&2
+          cat "$response_file" >&2
+          exit 1
+        fi
+        printf 'upload-url=%s\n' "$upload_url" >> "$GITHUB_OUTPUT"

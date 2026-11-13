@@ -1,0 +1,35 @@
+name: Validate npm release
+description: Validate a release tag against package.json
+inputs:
+  ref-name:
+    description: Release tag name
+    required: true
+outputs:
+  version:
+    description: Package version without the v prefix
+    value: ${{ steps.validate.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Validate tag and package version
+      id: validate
+      shell: bash
+      env:
+        REF_NAME: ${{ inputs.ref-name }}
+      run: |
+        set -euo pipefail
+
+        if [[ ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          printf 'Invalid release tag: %s\n' "$REF_NAME" >&2
+          exit 1
+        fi
+
+        expected_version="${REF_NAME#v}"
+        package_version="$(jq -r '.version' package.json)"
+        if [[ "$package_version" != "$expected_version" ]]; then
+          printf 'package.json version %s does not match release %s\n' \
+            "$package_version" "$expected_version" >&2
+          exit 1
+        fi
+
+        printf 'version=%s\n' "$expected_version" >> "$GITHUB_OUTPUT"

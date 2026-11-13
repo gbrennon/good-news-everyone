@@ -107,6 +107,10 @@ responds, the session shuts down, or a reminder cap is reached.
 - `src/notification_hooks_extension/` registers lifecycle listeners on the Pi
   extension API.
 
+## Automated releases
+
+See [`docs/releases.md`](docs/releases.md) for the release process and required repository secrets.
+
 ## Verification
 
 ```bash

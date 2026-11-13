@@ -1,0 +1,45 @@
+name: Validate release branch
+description: Validate a release branch against package.json and remote tags
+inputs:
+  head-ref:
+    description: Release branch name
+    required: true
+outputs:
+  version:
+    description: Release version without prefixes
+    value: ${{ steps.validate.outputs.version }}
+  tag:
+    description: Release tag name
+    value: ${{ steps.validate.outputs.tag }}
+runs:
+  using: composite
+  steps:
+    - name: Validate release branch
+      id: validate
+      shell: bash
+      env:
+        HEAD_REF: ${{ inputs.head-ref }}
+      run: |
+        set -euo pipefail
+
+        if [[ ! "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          printf 'Invalid release branch: %s\n' "$HEAD_REF" >&2
+          exit 1
+        fi
+
+        version="${HEAD_REF#release/v}"
+        tag="v$version"
+        package_version="$(jq -r '.version' package.json)"
+        if [[ "$package_version" != "$version" ]]; then
+          printf 'package.json version %s does not match release %s\n' \
+            "$package_version" "$version" >&2
+          exit 1
+        fi
+
+        if git ls-remote --exit-code --refs origin "refs/tags/$tag" >/dev/null 2>&1; then
+          printf 'Release tag already exists: %s\n' "$tag" >&2
+          exit 1
+        fi
+
+        printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+        printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
