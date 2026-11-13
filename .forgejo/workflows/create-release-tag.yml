@@ -1,0 +1,35 @@
+name: Create release tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Tag merged release
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: codeberg-small
+    steps:
+      - name: Check out merge commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Validate release branch
+        id: release
+        uses: ./.forgejo/actions/validate-release-branch
+        with:
+          head-ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Push release tag
+        uses: ./.forgejo/actions/push-release-tag
+        with:
+          tag: ${{ steps.release.outputs.tag }}
