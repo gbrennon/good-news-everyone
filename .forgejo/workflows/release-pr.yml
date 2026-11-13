@@ -1,0 +1,64 @@
+name: Release pull request validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release credentials
+    if: >-
+      startsWith(github.event.pull_request.head.ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: codeberg-small
+    steps:
+      - name: Check out release pull request
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Validate release branch and package version
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$HEAD_REF" =~ ^release/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            printf 'Invalid release branch: %s\n' "$HEAD_REF" >&2
+            exit 1
+          fi
+          expected_version="${HEAD_REF#release/v}"
+          package_version="$(jq -r '.version' package.json)"
+          if [[ "$package_version" != "$expected_version" ]]; then
+            printf 'package.json version %s does not match release %s\n' \
+              "$package_version" "$expected_version" >&2
+            exit 1
+          fi
+
+      - name: Verify npm token
+        uses: ./.forgejo/actions/verify-npm-token
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify GitHub token
+        uses: ./.forgejo/actions/verify-github-token
+        with:
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+
+      - name: Verify Codeberg token
+        shell: bash
+        env:
+          API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --proto '=https' --tlsv1.2 \
+            --header "Authorization: token $TOKEN" \
+            --header 'Accept: application/json' \
+            "$API_URL/repos/$REPOSITORY" >/dev/null
