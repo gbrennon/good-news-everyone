@@ -10,6 +10,7 @@ import {
   RandomSource,
   type SettleEvent,
 } from "../src/index";
+import ompDefault from "../src/omp";
 
 class FakeHookApi implements HookApi {
   public constructor() {
@@ -71,6 +72,15 @@ test("omp lifecycle registers agent_end and not agent_settled", () => {
   expect(api.registeredEvents).toContain("session_shutdown");
   expect(api.registeredEvents).not.toContain("agent_settled");
   expect(api.registeredEvents).not.toContain("ui_prompt_start");
+});
+
+test("published omp entrypoint registers the omp lifecycle", () => {
+  const api = new FakeHookApi();
+
+  ompDefault(api);
+
+  expect(api.registeredEvents).toContain("agent_end");
+  expect(api.registeredEvents).not.toContain("agent_settled");
 });
 
 test("omp notifies completion from agent_end", async () => {
