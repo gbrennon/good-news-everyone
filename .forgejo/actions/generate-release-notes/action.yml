@@ -1,0 +1,37 @@
+name: Generate release notes
+description: Generate release notes from the tag history
+inputs:
+  ref-name:
+    description: Current release tag
+    required: true
+outputs:
+  path:
+    description: Path to the release notes file
+    value: ${{ steps.notes.outputs.path }}
+runs:
+  using: composite
+  steps:
+    - name: Generate release notes
+      id: notes
+      shell: bash
+      env:
+        REF_NAME: ${{ inputs.ref-name }}
+      run: |
+        set -euo pipefail
+
+        previous_tag="$(git tag --sort=-version:refname | awk -v current="$REF_NAME" '$0 != current { print; exit }')"
+        notes_path="$RUNNER_TEMP/good-news-release-notes.md"
+        {
+          printf '# %s\n\n' "$REF_NAME"
+          if [[ -n "$previous_tag" ]]; then
+            git log --format='- %s (%h)' "$previous_tag..$REF_NAME"
+          else
+            git log --format='- %s (%h)' "$REF_NAME"
+          fi
+        } > "$notes_path"
+
+        if [[ ! -s "$notes_path" ]]; then
+          printf 'Release notes are empty\n' >&2
+          exit 1
+        fi
+        printf 'path=%s\n' "$notes_path" >> "$GITHUB_OUTPUT"

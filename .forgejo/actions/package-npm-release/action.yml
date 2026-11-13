@@ -1,0 +1,24 @@
+name: Package npm release
+description: Create the npm tarball for a release
+outputs:
+  asset:
+    description: Path to the generated npm tarball
+    value: ${{ steps.package.outputs.asset }}
+runs:
+  using: composite
+  steps:
+    - name: Create npm tarball
+      id: package
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        destination="$RUNNER_TEMP/good-news-release"
+        mkdir -p "$destination"
+        asset_name="$(npm pack --json --pack-destination "$destination" | jq -r '.[0].filename')"
+        asset="$destination/$asset_name"
+        if [[ ! -s "$asset" ]]; then
+          printf 'npm tarball was not created: %s\n' "$asset" >&2
+          exit 1
+        fi
+        printf 'asset=%s\n' "$asset" >> "$GITHUB_OUTPUT"
