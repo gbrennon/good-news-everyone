@@ -109,17 +109,7 @@ responds, the session shuts down, or a reminder cap is reached.
 
 ## Automated releases
 
-Releases start from a `release/vX.Y.Z` branch whose version matches `package.json`.
-
-- Release pull requests verify `NPM_TOKEN` and `GH_RELEASE_TOKEN` without publishing.
-- Merging the release pull request creates the matching `vX.Y.Z` tag.
-- The tag publishes the npm package and creates Codeberg and GitHub releases.
-- Each forge release includes the generated npm `.tgz` package.
-
-Configure these repository secrets before merging a release pull request:
-
-- `NPM_TOKEN`: npm publication token for the package.
-- `GH_RELEASE_TOKEN`: GitHub token that can create releases and upload assets.
+See [`docs/releases.md`](docs/releases.md) for the release process and required repository secrets.
 
 ## Verification
 
