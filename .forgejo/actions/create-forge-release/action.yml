@@ -65,7 +65,7 @@ runs:
             } + (if $target_commitish == "" then {} else {
               target_commitish: $target_commitish
             } end)'
-        )
+        )"
         response_file="$RUNNER_TEMP/release-response.json"
         curl --fail-with-body --silent --show-error \
           --proto '=https' --tlsv1.2 \

@@ -20,5 +20,6 @@ runs:
         fi
         git config user.name 'github-actions[bot]'
         git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-        git tag "$TAG" "$GITHUB_SHA"
+        merge_commit="$(git rev-parse HEAD)"
+        git tag "$TAG" "$merge_commit"
         git push origin "refs/tags/$TAG"
