@@ -103,8 +103,8 @@ test("notification identifies the agent pane and sends only concise metadata", a
     {
       command: "notify-send",
       args: [
-        "Good news, everyone! We've got a very special delivery today.",
-        "agent=pi session=pi-hooks window=1:pi",
+        "Good news, everyone!",
+        "We've got a very special delivery today.\nagent=pi session=pi-hooks window=1:pi\n",
       ],
       cwd: "/work/repo",
     },
@@ -144,7 +144,7 @@ test("notification hook includes tmux context for questions and failures", async
       command: "notify-send",
       args: [
         "What-mas?",
-        "agent=pi session=pi-hooks window=1:pi",
+        "What do you need from the crew?\nagent=pi session=pi-hooks window=1:pi\n",
       ],
       cwd: "/work/repo",
     },
@@ -153,8 +153,8 @@ test("notification hook includes tmux context for questions and failures", async
       command: "notify-send",
       args: [
         "--urgency=critical",
-        "Good news, everyone! There's a report on TV with some very bad news!",
-        "agent=pi session=pi-hooks window=1:pi",
+        "Good news, everyone!",
+        "There's a report on TV with some very bad news!\nagent=pi session=pi-hooks window=1:pi\n",
       ],
       cwd: "/work/repo",
     },
@@ -240,8 +240,8 @@ test("classifies an agent-end error as a failed task", async () => {
     command: "notify-send",
     args: [
       "--urgency=critical",
-      "Good news, everyone! There's a report on TV with some very bad news!",
-      "agent=omp session=pi-hooks window=1:pi",
+      "Good news, everyone!",
+      "There's a report on TV with some very bad news!\nagent=omp session=pi-hooks window=1:pi\n",
     ],
     cwd: "/work/repo",
   });
@@ -274,7 +274,7 @@ test("classifies an agent-end question without punctuation as input needed", asy
     command: "notify-send",
     args: [
       "What-mas?",
-      "agent=omp session=pi-hooks window=1:pi",
+      "What do you need from the crew?\nagent=omp session=pi-hooks window=1:pi\n",
     ],
     cwd: "/work/repo",
   });
@@ -304,7 +304,7 @@ test("classifies an agent-end assistant question as input needed", async () => {
     command: "notify-send",
     args: [
       "What-mas?",
-      "agent=omp session=pi-hooks window=1:pi",
+      "What do you need from the crew?\nagent=omp session=pi-hooks window=1:pi\n",
     ],
     cwd: "/work/repo",
   });
@@ -337,7 +337,7 @@ test("classifies a settled assistant question as input needed", async () => {
     command: "notify-send",
     args: [
       "What-mas?",
-      "agent=pi session=pi-hooks window=1:pi",
+      "What do you need from the crew?\nagent=pi session=pi-hooks window=1:pi\n",
     ],
     cwd: "/work/repo",
   });
@@ -360,8 +360,8 @@ test("notifies aborted settlement as an error", async () => {
     command: "notify-send",
     args: [
       "--urgency=critical",
-      "Good news, everyone! There's a report on TV with some very bad news!",
-      "agent=pi session=pi-hooks window=1:pi",
+      "Good news, everyone!",
+      "There's a report on TV with some very bad news!\nagent=pi session=pi-hooks window=1:pi\n",
     ],
       cwd: "/work/repo",
   });
@@ -388,8 +388,8 @@ test("notifies outside tmux with an explicit unavailable context", async () => {
   expect(api.calls).toEqual([{
       command: "notify-send",
       args: [
-        "Good news, everyone! We've got a very special delivery today.",
-        "agent=omp",
+        "Good news, everyone!",
+        "We've got a very special delivery today.\nagent=omp\n",
       ],
       cwd: "/work/repo",
     },
@@ -414,9 +414,9 @@ test("default extension notifies on settlement without an injected service", asy
 
   const notifications = api.calls.filter((call) => call.command === "notify-send");
   expect(notifications).toHaveLength(1);
-  expect(notifications[0]!.args).toEqual([
-    expect.any(String),
-    "agent=pi session=pi-hooks window=1:pi",
-  ]);
+  expect(notifications[0]!.args[0]).toContain("news");
+  expect(notifications[0]!.args[1]).toMatch(
+    /\nagent=pi session=pi-hooks window=1:pi\n$/,
+  );
   expect(notifications[0]!.cwd).toBe("/work/repo");
 });

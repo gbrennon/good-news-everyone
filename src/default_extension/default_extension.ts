@@ -12,8 +12,7 @@ import { SystemScheduler } from "../system_scheduler";
 export class DefaultExtension {
   private readonly extension: NotificationHooksExtension;
 
-  public constructor() {
-    const agentName = process.env.PI_HOOK_AGENT ?? "pi";
+  public constructor(agentName = process.env.PI_HOOK_AGENT ?? "pi") {
     const reminders = new ReminderCoordinator(
       new SystemScheduler(),
       DefaultExtension.readPositiveInteger(

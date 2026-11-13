@@ -1,0 +1,43 @@
+name: Upload forge release asset
+description: Upload an asset to a Forgejo-compatible or GitHub release
+inputs:
+  upload-url:
+    description: Release asset upload URL
+    required: true
+  token:
+    description: Release API token
+    required: true
+  auth-scheme:
+    description: Authorization scheme
+    required: true
+  asset:
+    description: Path to the asset
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Upload release asset
+      shell: bash
+      env:
+        UPLOAD_URL: ${{ inputs.upload-url }}
+        TOKEN: ${{ inputs.token }}
+        AUTH_SCHEME: ${{ inputs.auth-scheme }}
+        ASSET: ${{ inputs.asset }}
+      run: |
+        set -euo pipefail
+
+        case "${AUTH_SCHEME,,}" in
+          bearer) authorization="Bearer $TOKEN" ;;
+          token) authorization="token $TOKEN" ;;
+          *) printf 'Unsupported release auth scheme: %s\n' "$AUTH_SCHEME" >&2; exit 1 ;;
+        esac
+        asset_name="$(basename "$ASSET")"
+        encoded_name="$(jq -nr --arg name "$asset_name" '$name | @uri')"
+        curl --fail-with-body --silent --show-error \
+          --proto '=https' --tlsv1.2 \
+          --request POST \
+          --url "$UPLOAD_URL?name=$encoded_name" \
+          --header "Authorization: $authorization" \
+          --header 'Accept: application/json' \
+          --header 'Content-Type: application/gzip' \
+          --data-binary "@$ASSET" >/dev/null

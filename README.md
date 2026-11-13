@@ -24,22 +24,53 @@ The name covers all three events, errors included:
 - A completion is genuine good news.
 - A failure is still announced as "good news," which is the joke.
 
-### Taglines
+## Taglines
 
-Runtime notifications use the selected quote as the notification title. The body contains only
-the agent name and, when running inside tmux, the originating session and window.
-- `question` notifications use quotes verified from Futurama Season 1, Season 2,
-  and Season 3 transcripts.
-- `complete` and `error` notifications use the same quote sources.
-- Questions re-sent by reminders preserve the originally selected quote.
+Runtime notifications use the selected opening phrase as the notification title. The body contains
+the tagline, a newline, session metadata, and a trailing newline.
+- `question` notifications use question-oriented taglines.
+- `complete` notifications use completion-oriented taglines.
+- `error` notifications use failure-oriented taglines.
+- Questions re-sent by reminders preserve the originally selected title and tagline.
 
-#### Screenshots
+### Screenshots
 
 ![Completion notification](docs/assets/notification-complete.png)
 
 ![Question notification](docs/assets/notification-question.png)
 
 ![Error notification](docs/assets/notification-error.png)
+
+## Installation
+
+### Pi
+
+Install the package with the Pi package manager:
+
+```bash
+pi install npm:@gbrennon/good-news-everyone@0.1.0
+```
+
+Pi loads `src/index.ts` from the package manifest.
+
+### OMP
+
+Install the package with the OMP plugin manager:
+
+```bash
+omp plugin install @gbrennon/good-news-everyone@0.1.0
+```
+
+OMP loads the dedicated `src/omp.ts` entrypoint, which uses the `agent_end`
+lifecycle. Restart OMP after installing or updating the plugin.
+
+### Manual installation
+
+To install both hooks directly into the user extension directories:
+
+```bash
+./scripts/install.sh
+```
 
 ## Overview
 
@@ -63,8 +94,8 @@ responds, the session shuts down, or a reminder cap is reached.
 - pi settles on `agent_settled` and signals idle input on `ui_prompt_start`.
 - omp emits neither; it exposes `agent_end` as the terminal run signal, so the
   omp build drives complete, question, and error from `agent_end`.
-- The install bakes `PI_HOOK_AGENT`, and the extension selects the lifecycle from
-  it (`settled` for pi, `end` for omp).
+- The package manifest selects the Pi and OMP entrypoints independently.
+- The manual installer bakes `PI_HOOK_AGENT` into each generated bundle.
 
 ## Architecture
 
@@ -75,6 +106,10 @@ responds, the session shuts down, or a reminder cap is reached.
 - `src/system_scheduler.ts` adapts the runtime timer to the `Scheduler` port.
 - `src/notification_hooks_extension/` registers lifecycle listeners on the Pi
   extension API.
+
+## Automated releases
+
+See [`docs/releases.md`](docs/releases.md) for the release process and required repository secrets.
 
 ## Verification
 

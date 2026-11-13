@@ -53,8 +53,12 @@ class FakeHookApi implements HookApi {
     const notifications = this.calls.filter(
       (call) => call.command === "notify-send",
     );
-    const title = notifications[notifications.length - 1]?.args[0];
-    return title === "What-mas?" ? "question" : title ? "complete" : undefined;
+    const message = notifications[notifications.length - 1]?.args.at(-1);
+    return message?.startsWith("What do you need from the crew?")
+      ? "question"
+      : message
+        ? "complete"
+        : undefined;
   }
 
   public lastNotificationMessage(): string | undefined {
@@ -141,7 +145,7 @@ test("re-sends an unanswered agent question after the interval", async () => {
   expect(api.lastNotificationKind()).toBe("question");
   expect(resentMessage).toBe(initialMessage);
   expect(resentMessage).toBe(
-    "agent=pi session=s window=1:pi",
+    "What do you need from the crew?\nagent=pi session=s window=1:pi\n",
   );
 });
 
@@ -152,7 +156,9 @@ test("does not re-send the idle input-needed prompt", async () => {
   await scheduler.tick();
 
   expect(api.notificationCount()).toBe(1);
-  expect(api.lastNotificationMessage()).toBe("agent=pi session=s window=1:pi");
+  expect(api.lastNotificationMessage()).toBe(
+    "What do you need from the crew?\nagent=pi session=s window=1:pi\n",
+  );
 });
 
 test("stops re-sending once the maximum reminders is reached", async () => {

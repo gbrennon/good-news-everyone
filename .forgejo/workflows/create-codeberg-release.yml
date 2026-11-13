@@ -1,0 +1,53 @@
+name: Create Codeberg release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Codeberg release
+    runs-on: codeberg-medium
+    steps:
+      - name: Check out tagged release
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate release
+        uses: ./.forgejo/actions/validate-npm-release
+        with:
+          ref-name: ${{ github.ref_name }}
+
+      - name: Package npm release
+        id: package
+        uses: ./.forgejo/actions/package-npm-release
+
+      - name: Generate release notes
+        id: notes
+        uses: ./.forgejo/actions/generate-release-notes
+        with:
+          ref-name: ${{ github.ref_name }}
+
+      - name: Create Codeberg release
+        id: release
+        uses: ./.forgejo/actions/create-forge-release
+        with:
+          api-url: ${{ github.api_url }}
+          repository: ${{ github.repository }}
+          token: ${{ github.token }}
+          auth-scheme: token
+          tag: ${{ github.ref_name }}
+          notes: ${{ steps.notes.outputs.path }}
+
+      - name: Upload npm tarball
+        uses: ./.forgejo/actions/upload-forge-release-asset
+        with:
+          upload-url: ${{ steps.release.outputs.upload-url }}
+          token: ${{ github.token }}
+          auth-scheme: token
+          asset: ${{ steps.package.outputs.asset }}

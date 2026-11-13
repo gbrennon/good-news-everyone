@@ -10,6 +10,7 @@ import {
   RandomSource,
   type SettleEvent,
 } from "../src/index";
+import ompDefault from "../src/omp";
 
 class FakeHookApi implements HookApi {
   public constructor() {
@@ -73,6 +74,15 @@ test("omp lifecycle registers agent_end and not agent_settled", () => {
   expect(api.registeredEvents).not.toContain("ui_prompt_start");
 });
 
+test("published omp entrypoint registers the omp lifecycle", () => {
+  const api = new FakeHookApi();
+
+  ompDefault(api);
+
+  expect(api.registeredEvents).toContain("agent_end");
+  expect(api.registeredEvents).not.toContain("agent_settled");
+});
+
 test("omp notifies completion from agent_end", async () => {
   const { api, ctx } = buildOmp();
 
@@ -83,8 +93,8 @@ test("omp notifies completion from agent_end", async () => {
   }, ctx);
 
   expect(api.lastNotification()).toEqual([
-    "Good news, everyone! We've got a very special delivery today.",
-    "agent=omp session=s window=1:omp",
+    "Good news, everyone!",
+    "We've got a very special delivery today.\nagent=omp session=s window=1:omp\n",
   ]);
 });
 
@@ -103,7 +113,7 @@ test("omp notifies the real question text from agent_end", async () => {
 
   expect(api.lastNotification()).toEqual([
     "What-mas?",
-    "agent=omp session=s window=1:omp",
+    "What do you need from the crew?\nagent=omp session=s window=1:omp\n",
   ]);
 });
 
@@ -116,7 +126,7 @@ test("omp notifies failure from an aborted agent_end", async () => {
 
   expect(api.lastNotification()).toEqual([
     "--urgency=critical",
-    "Good news, everyone! There's a report on TV with some very bad news!",
-    "agent=omp session=s window=1:omp",
+    "Good news, everyone!",
+    "There's a report on TV with some very bad news!\nagent=omp session=s window=1:omp\n",
   ]);
 });

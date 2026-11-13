@@ -5,7 +5,39 @@
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./omp": "./src/omp.ts"
+  },
+  "files": [
+    "README.md",
+    "docs/assets",
+    "scripts/install.sh",
+    "src"
+  ],
+  "keywords": [
+    "pi-package",
+    "omp-plugin",
+    "notifications",
+    "ai-agent"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://codeberg.org/gbrennon/good-news-everyone.git"
+  },
+  "bugs": {
+    "url": "https://codeberg.org/gbrennon/good-news-everyone/issues"
+  },
+  "homepage": "https://codeberg.org/gbrennon/good-news-everyone",
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "omp": {
+    "extensions": [
+      "./src/omp.ts"
+    ]
   },
   "scripts": {
     "test": "bun test"
