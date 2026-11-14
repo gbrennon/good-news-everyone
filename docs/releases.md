@@ -24,6 +24,16 @@ npm version 0.2.0 --no-git-tag-version
 
 Commit the version change and open a pull request into `main`.
 
+The repository also provides a branch-and-commit helper:
+
+```bash
+scripts/bump_version.sh minor
+scripts/bump_version.sh minor --rc
+```
+
+Use `--rc` to create or increment a release candidate. A `patch` bump from an RC promotes it to the
+matching stable version.
+
 ### Validate the release pull request
 
 The release pull request workflow validates the branch name and package version. It verifies the
@@ -49,8 +59,10 @@ not silently report success for another destination.
 
 The package is published to npm as `@gbrennon/good-news-everyone@X.Y.Z`.
 
+RC packages use the npm `next` dist-tag. Stable packages use the npm `latest` dist-tag.
+
 The generated `gbrennon-good-news-everyone-X.Y.Z.tgz` file is attached to both Codeberg and GitHub
-releases.
+releases. RC releases are marked as prereleases on both forges.
 
 ## Recovery
 

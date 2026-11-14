@@ -23,6 +23,10 @@ inputs:
     description: Optional target commit for GitHub releases
     required: false
     default: ''
+  prerelease:
+    description: Whether the release is a prerelease
+    required: false
+    default: 'false'
 outputs:
   upload-url:
     description: Release asset upload URL
@@ -41,6 +45,7 @@ runs:
         TAG: ${{ inputs.tag }}
         NOTES: ${{ inputs.notes }}
         TARGET_COMMITISH: ${{ inputs.target-commitish }}
+        PRERELEASE: ${{ inputs.prerelease }}
       run: |
         set -euo pipefail
 
@@ -55,13 +60,14 @@ runs:
             --arg tag_name "$TAG" \
             --arg name "$TAG" \
             --arg target_commitish "$TARGET_COMMITISH" \
+            --argjson prerelease "$PRERELEASE" \
             --rawfile body "$NOTES" \
             '{
               tag_name: $tag_name,
               name: $name,
               body: $body,
               draft: false,
-              prerelease: false
+              prerelease: $prerelease
             } + (if $target_commitish == "" then {} else {
               target_commitish: $target_commitish
             } end)'

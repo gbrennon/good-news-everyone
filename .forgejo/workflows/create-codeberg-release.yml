@@ -19,6 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate release
+        id: validate
         uses: ./.forgejo/actions/validate-npm-release
         with:
           ref-name: ${{ github.ref_name }}
@@ -43,6 +44,7 @@ jobs:
           auth-scheme: token
           tag: ${{ github.ref_name }}
           notes: ${{ steps.notes.outputs.path }}
+          prerelease: ${{ steps.validate.outputs.prerelease }}
 
       - name: Upload npm tarball
         uses: ./.forgejo/actions/upload-forge-release-asset
