@@ -34,7 +34,7 @@ cd "$repository_root"
 [[ -z "$(git status --porcelain)" ]] || fail 'Worktree must be clean before a version bump'
 
 current_version="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('package.json')).version)")"
-version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(-rc\.([0-9]+))?$'
+version_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.(0|[1-9][0-9]*))?$'
 [[ "$current_version" =~ $version_pattern ]] || fail "Unsupported package version: $current_version"
 
 major="${BASH_REMATCH[1]}"

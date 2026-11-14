@@ -109,6 +109,20 @@ test("promotes an existing release candidate to stable", async () => {
   }
 });
 
+test("rejects versions with leading zeroes", async () => {
+  const repository = await createRepository("01.0.0");
+
+  try {
+    const result = runBump(repository, "patch");
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("Unsupported package version");
+    expect(runGit(repository, "branch", "--show-current")).toBe("main");
+  } finally {
+    await rm(repository, { recursive: true, force: true });
+  }
+});
+
 test("rejects a dirty worktree", async () => {
   const repository = await createRepository("0.1.0");
   await writeFile(join(repository, "uncommitted.txt"), "changes");
