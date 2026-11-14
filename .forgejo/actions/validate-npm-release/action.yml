@@ -8,6 +8,9 @@ outputs:
   version:
     description: Package version without the v prefix
     value: ${{ steps.validate.outputs.version }}
+  prerelease:
+    description: Whether the release is an RC
+    value: ${{ steps.validate.outputs.prerelease }}
 runs:
   using: composite
   steps:
@@ -19,7 +22,7 @@ runs:
       run: |
         set -euo pipefail
 
-        if [[ ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
           printf 'Invalid release tag: %s\n' "$REF_NAME" >&2
           exit 1
         fi
@@ -32,4 +35,7 @@ runs:
           exit 1
         fi
 
+        prerelease=false
+        [[ "$expected_version" == *-rc.* ]] && prerelease=true
         printf 'version=%s\n' "$expected_version" >> "$GITHUB_OUTPUT"
+        printf 'prerelease=%s\n' "$prerelease" >> "$GITHUB_OUTPUT"
