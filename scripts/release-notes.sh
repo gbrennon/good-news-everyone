@@ -21,14 +21,15 @@ git rev-parse --verify --quiet "refs/tags/$release_tag" >/dev/null || {
 }
 
 previous_tag="$(git tag --sort=-version:refname | awk -v current="$release_tag" '$0 != current { print; exit }')"
-range="$release_tag"
-if [[ -n "$previous_tag" ]]; then
-  range="$previous_tag..$release_tag"
-fi
 
 args=(--config "$root_dir/cliff.toml" --tag "$release_tag" --strip all)
+if [[ -n "$previous_tag" ]]; then
+  args+=("$previous_tag..$release_tag")
+else
+  args+=(--current)
+fi
 if [[ "$#" == 2 ]]; then
   args+=(--output "$2")
 fi
 
-exec "$git_cliff_command" "${args[@]}" "$range"
+exec "$git_cliff_command" "${args[@]}"
