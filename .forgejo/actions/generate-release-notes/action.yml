@@ -11,6 +11,9 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Install git-cliff
+      shell: bash
+      run: scripts/ensure-git-cliff.sh
     - name: Generate release notes
       id: notes
       shell: bash
@@ -19,17 +22,8 @@ runs:
       run: |
         set -euo pipefail
 
-        previous_tag="$(git tag --sort=-version:refname | awk -v current="$REF_NAME" '$0 != current { print; exit }')"
         notes_path="$RUNNER_TEMP/good-news-release-notes.md"
-        {
-          printf '# %s\n\n' "$REF_NAME"
-          if [[ -n "$previous_tag" ]]; then
-            git log --format='- %s (%h)' "$previous_tag..$REF_NAME"
-          else
-            git log --format='- %s (%h)' "$REF_NAME"
-          fi
-        } > "$notes_path"
-
+        scripts/release-notes.sh "$REF_NAME" "$notes_path"
         if [[ ! -s "$notes_path" ]]; then
           printf 'Release notes are empty\n' >&2
           exit 1
