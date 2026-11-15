@@ -10,6 +10,10 @@ on:
         description: Release tag to publish
         required: true
         type: string
+      source_ref:
+        description: Git revision containing the release workflow and package
+        required: false
+        type: string
 
 jobs:
   release:
@@ -20,7 +24,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref_name || github.ref }}
+          ref: ${{ inputs.source_ref || inputs.ref_name || github.ref }}
 
       - name: Validate release
         id: validate
