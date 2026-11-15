@@ -52,7 +52,7 @@ jobs:
           auth-scheme: bearer
           tag: ${{ inputs.ref_name || github.ref_name }}
           notes: ${{ steps.notes.outputs.path }}
-          target-commitish: ${{ inputs.ref_name || github.sha }}
+          target-commitish: ${{ github.sha }}
           prerelease: ${{ steps.validate.outputs.prerelease }}
 
       - name: Upload npm tarball
